@@ -1,10 +1,35 @@
 import 'package:flutter/material.dart';
+
 class ScoreBoard extends StatelessWidget {
-  final int totalCorrect; final int streak;
-  const ScoreBoard({super.key, required this.totalCorrect, required this.streak});
-  @override Widget build(BuildContext context) => Row(
-    mainAxisAlignment: MainAxisAlignment.spaceAround,
-    children: [_item("👑", totalCorrect), _item("⭐", streak)],
-  );
-  Widget _item(String icon, int v)=> Row(children:[Text(icon, style: const TextStyle(fontSize:28)), const SizedBox(width:6), Text("$v", style: const TextStyle(fontSize:24, fontWeight: FontWeight.bold))]);
+  final int streak;
+  final int maxStreak;
+  final int totalCorrect;
+
+  const ScoreBoard({
+    super.key,
+    required this.streak,
+    required this.maxStreak,
+    required this.totalCorrect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text("⭐ ",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        Text("$streak  ",
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
+        const Text("🔥 ",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        Text("$maxStreak  ",
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
+        const Text("👑 ",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        Text("$totalCorrect",
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
 }
