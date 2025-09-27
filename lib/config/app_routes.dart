@@ -1,22 +1,27 @@
 import 'package:flutter/material.dart';
 
-import '../models/vn_letter.dart';
-import '../screens/flashcard_screen.dart';
+import '../screens/addition_screen.dart';
+import '../screens/division_screen.dart';
 import '../screens/game_fill.dart';
 import '../screens/game_find.dart';
 import '../screens/game_listen.dart';
 import '../screens/game_match.dart';
-import '../screens/home_screen.dart';
-import '../screens/letter_screen.dart';
+import '../screens/multiplication_screen.dart';
+import '../screens/numbers_screen.dart';
 import '../screens/start_screen.dart';
-import '../screens/write_screen.dart';
+import '../screens/subtraction_screen.dart';
 
 class AppRoutes {
   static const String start = '/';
-  static const String home = '/home';
-  static const String flashcard = '/flashcard';
-  static const String letter = '/letter';
-  static const String write = '/write';
+
+  // 📚 Học Toán
+  static const String numbers = "/numbers";
+  static const String addition = "/addition";
+  static const String subtraction = "/subtraction";
+  static const String multiplication = "/multiplication";
+  static const String division = "/division";
+
+  // 🎮 Trò chơi
   static const String gameFind = '/game_find';
   static const String gameMatch = '/game_match';
   static const String gameFill = '/game_fill';
@@ -30,15 +35,33 @@ class AppRoutes {
           settings: settings,
         );
 
-      case home:
+      case numbers:
         return MaterialPageRoute(
-          builder: (_) => const HomeScreen(),
+          builder: (_) => const NumbersScreen(),
           settings: settings,
         );
 
-      case flashcard:
+      case addition:
         return MaterialPageRoute(
-          builder: (_) => const FlashcardScreen(),
+          builder: (_) => const AdditionScreen(),
+          settings: settings,
+        );
+
+      case subtraction:
+        return MaterialPageRoute(
+          builder: (_) => const SubtractionScreen(),
+          settings: settings,
+        );
+
+      case multiplication:
+        return MaterialPageRoute(
+          builder: (_) => const MultiplicationScreen(),
+          settings: settings,
+        );
+
+      case division:
+        return MaterialPageRoute(
+          builder: (_) => const DivisionScreen(),
           settings: settings,
         );
 
@@ -63,40 +86,6 @@ class AppRoutes {
       case gameListen:
         return MaterialPageRoute(
           builder: (_) => const GameListen(),
-          settings: settings,
-        );
-
-      case letter:
-        final args = settings.arguments as Map<String, dynamic>? ?? {};
-        final letters = args['letters'] as List<VnLetter>? ?? [];
-        final index = args['currentIndex'] as int? ?? 0;
-
-        if (letters.isEmpty) {
-          return _errorRoute("Không có dữ liệu chữ để hiển thị");
-        }
-
-        return MaterialPageRoute(
-          builder: (_) => LetterScreen(
-            letters: letters,
-            currentIndex: index,
-          ),
-          settings: settings,
-        );
-
-      case write:
-        final args = settings.arguments as Map<String, dynamic>? ?? {};
-        final letters = args['letters'] as List<VnLetter>? ?? [];
-        final index = args['startIndex'] as int? ?? 0;
-
-        if (letters.isEmpty) {
-          return _errorRoute("Không có dữ liệu chữ để luyện viết");
-        }
-
-        return MaterialPageRoute(
-          builder: (_) => WriteScreen(
-            letters: letters,
-            startIndex: index,
-          ),
           settings: settings,
         );
 

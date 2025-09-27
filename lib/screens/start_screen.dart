@@ -1,8 +1,5 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 
-import '../config/app_routes.dart';
 import '../services/game_registry.dart';
 import '../services/learning_registry.dart';
 import '../services/progress_service.dart';
@@ -110,29 +107,9 @@ class _StartScreenState extends State<StartScreen>
           builder: (context, snapshot) {
             final progress = snapshot.data ?? 0.0;
             return LearningButton(
-              title: l.title,
-              icon: l.icon,
-              gradient: l.gradient,
-              onTap: () async {
-                if (l.route == AppRoutes.write) {
-                  // 🔹 Load danh sách chữ cái từ JSON
-                  final letters = await LearningRegistry.loadLetters();
-                  if (letters.isEmpty) return;
-
-                  // 🔹 Random 1 chữ
-                  final randomIndex = Random().nextInt(letters.length);
-
-                  Navigator.pushNamed(
-                    context,
-                    AppRoutes.write,
-                    arguments: {'letters': letters, 'startIndex': randomIndex},
-                  );
-                } else if (l.route == AppRoutes.home ||
-                    l.route == AppRoutes.flashcard) {
-                  // 🔹 Các màn khác: vẫn push route bình thường
-                  Navigator.pushNamed(context, l.route);
-                }
-              },
+              info: l, // 👈 truyền nguyên object
+              progress: progress,
+              onTap: () => Navigator.pushNamed(context, l.route),
             );
           },
         );

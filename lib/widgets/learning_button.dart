@@ -1,19 +1,16 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../models/learning_info.dart';
 
 class LearningButton extends StatefulWidget {
-  final String title;
-  final IconData icon;
-  final List<Color> gradient;
+  final LearningInfo info;
   final VoidCallback onTap;
+  final double? progress;
 
   const LearningButton({
     super.key,
-    required this.title,
-    required this.icon,
-    required this.gradient,
+    required this.info,
     required this.onTap,
+    this.progress,
   });
 
   @override
@@ -21,156 +18,111 @@ class LearningButton extends StatefulWidget {
 }
 
 class _LearningButtonState extends State<LearningButton>
-    with TickerProviderStateMixin {
-  late AnimationController _pressController;
-  late Animation<double> _scaleAnim;
-  late Animation<double> _shakeAnim;
-
-  late AnimationController _particleController;
-  final List<_Particle> _particles = [];
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
 
   @override
   void initState() {
     super.initState();
-
-    _pressController = AnimationController(
+    _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 150),
+      lowerBound: 0.95,
+      upperBound: 1.0,
+      value: 1.0,
     );
-
-    _scaleAnim = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(parent: _pressController, curve: Curves.elasticOut),
-    );
-
-    _shakeAnim = Tween<double>(begin: -6.0, end: 6.0).animate(
-      CurvedAnimation(parent: _pressController, curve: Curves.elasticIn),
-    );
-
-    _particleController =
-    AnimationController(vsync: this, duration: const Duration(seconds: 1))
-      ..addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
-    _pressController.dispose();
-    _particleController.dispose();
+    _ctrl.dispose();
     super.dispose();
   }
 
-  void _spawnParticles() {
-    _particles.clear();
-    final random = Random();
-    for (int i = 0; i < 12; i++) {
-      _particles.add(_Particle(
-        dx: random.nextDouble() * 100 - 50,
-        dy: random.nextDouble() * -100 - 30,
-        emoji: ["✨", "💖", "🎈", "🌟"][random.nextInt(4)],
-      ));
-    }
-    _particleController.forward(from: 0);
-  }
+  Widget _buildIcon() {
+    final info = widget.info;
 
-  void _handleTap() {
-    if (_pressController.isAnimating) {
-      _pressController.reset();
+    if (info.group == "counting") {
+      // 👉 Nhóm "Số đếm": có mascot nhỏ đi kèm
+      return Stack(
+        alignment: Alignment.center,
+        children: [
+          Icon(info.icon, size: 32, color: Colors.white),
+          Positioned(
+            right: -8,
+            bottom: -8,
+            child: Image.asset(
+              "assets/images/mascot/mascot.png", // 👈 cần có ảnh mascot
+              width: 28,
+            ),
+          ),
+        ],
+      );
+    } else {
+      // 👉 Nhóm "Phép toán": thêm sparkle
+      return Stack(
+        alignment: Alignment.center,
+        children: [
+          Icon(info.icon, size: 32, color: Colors.white),
+          Positioned(
+            top: -6,
+            right: -6,
+            child: Icon(Icons.star, size: 16, color: Colors.yellowAccent),
+          ),
+        ],
+      );
     }
-    _pressController.forward();
-    _spawnParticles();
-    widget.onTap();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        AnimatedBuilder(
-          animation: _pressController,
-          builder: (context, child) {
-            final scale = _scaleAnim.value;
-            final shake = _shakeAnim.value * (1 - _pressController.value);
+    final info = widget.info;
 
-            return Transform.scale(
-              scale: scale,
-              child: Container(
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: widget.gradient),
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
-                    BoxShadow(
-                      color: widget.gradient.last.withOpacity(0.5),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: ListTile(
-                  contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                  leading: Transform.translate(
-                    offset: Offset(shake, 0),
-                    child: Icon(widget.icon, color: Colors.white, size: 30),
+    return ScaleTransition(
+      scale: _ctrl,
+      child: GestureDetector(
+        onTapDown: (_) => _ctrl.reverse(),
+        onTapUp: (_) {
+          _ctrl.forward();
+          widget.onTap();
+        },
+        onTapCancel: () => _ctrl.forward(),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: info.gradient),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: info.gradient.last.withOpacity(0.5),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              )
+            ],
+          ),
+          child: Row(
+            children: [
+              _buildIcon(),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  info.title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-                  title: Text(
-                    widget.title,
-                    style: GoogleFonts.baloo2(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  onTap: _handleTap,
                 ),
               ),
-            );
-          },
-        ),
-        Positioned.fill(
-          child: IgnorePointer(
-            child: CustomPaint(
-              painter: _ParticlePainter(_particles, _particleController.value),
-            ),
+              if (widget.progress != null)
+                Text(
+                  "⭐ ${(widget.progress! * info.total).round()}/${info.total}",
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
-}
-
-class _Particle {
-  final double dx;
-  final double dy;
-  final String emoji;
-
-  _Particle({required this.dx, required this.dy, required this.emoji});
-}
-
-class _ParticlePainter extends CustomPainter {
-  final List<_Particle> particles;
-  final double progress;
-
-  _ParticlePainter(this.particles, this.progress);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final textPainter = TextPainter(textDirection: TextDirection.ltr);
-
-    for (var p in particles) {
-      final offset = Offset(
-        size.width / 2 + p.dx * progress,
-        size.height / 2 + p.dy * progress,
-      );
-
-      textPainter.text = TextSpan(
-        text: p.emoji,
-        style: TextStyle(fontSize: 22 * (1 - progress)),
-      );
-      textPainter.layout();
-      textPainter.paint(canvas, offset);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _ParticlePainter oldDelegate) => true;
 }

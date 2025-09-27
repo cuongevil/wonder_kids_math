@@ -7,13 +7,15 @@ class LearningInfo {
   final List<Color> gradient;
   final String route;
   final int total;
+  final String group; // 👈 thêm group
 
-  const LearningInfo({
+  LearningInfo({
     required this.id,
     required this.title,
     required this.icon,
     required this.gradient,
     required this.route,
-    this.total = 0,
+    required this.total,
+    this.group = "operation", // mặc định là toán
   });
 }

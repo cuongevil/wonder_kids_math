@@ -1,37 +1,63 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../config/app_routes.dart';
 import '../models/learning_info.dart';
-import '../models/vn_letter.dart';
 import 'progress_service.dart';
 
 class LearningRegistry {
   static final List<LearningInfo> _learnings = [
+    // 🔢 Số đếm
     LearningInfo(
-      id: "learn1",
-      title: "Chữ cái",
-      icon: Icons.sort_by_alpha,
-      gradient: [Colors.orange, Colors.yellow],
-      route: AppRoutes.home,
-      total: 29,
+      id: "num1",
+      title: "Số đếm 1-100",
+      icon: Icons.numbers,
+      gradient: [Colors.teal, Colors.cyan],
+      route: AppRoutes.numbers,
+      total: 100,
+      group: "counting",
     ),
+
+    // ➕ Cộng
     LearningInfo(
-      id: "learn2",
-      title: "Thẻ chữ",
-      icon: Icons.style,
-      gradient: [Colors.blue, Colors.purple],
-      route: AppRoutes.flashcard,
-      total: 29,
+      id: "num2",
+      title: "Cộng",
+      icon: Icons.add_circle,
+      gradient: [Colors.pinkAccent, Colors.redAccent],
+      route: AppRoutes.addition,
+      total: 50,
+      group: "operation",
     ),
+
+    // ➖ Trừ
     LearningInfo(
-      id: "learn3",
-      title: "Tập viết",
-      icon: Icons.edit,
-      gradient: [Colors.green, Colors.lightGreen],
-      route: AppRoutes.write,
-      total: 29,
+      id: "num3",
+      title: "Trừ",
+      icon: Icons.remove_circle,
+      gradient: [Colors.indigo, Colors.deepPurpleAccent],
+      route: AppRoutes.subtraction,
+      total: 50,
+      group: "operation",
+    ),
+
+    // ✖️ Nhân
+    LearningInfo(
+      id: "num4",
+      title: "Nhân",
+      icon: Icons.clear,
+      gradient: [Colors.green, Colors.lightGreenAccent],
+      route: AppRoutes.multiplication,
+      total: 81,
+      group: "operation",
+    ),
+
+    // ➗ Chia
+    LearningInfo(
+      id: "num5",
+      title: "Chia",
+      icon: Icons.percent,
+      gradient: [Colors.blueAccent, Colors.lightBlue],
+      route: AppRoutes.division,
+      total: 81,
+      group: "operation",
     ),
   ];
 
@@ -49,12 +75,5 @@ class LearningRegistry {
     for (final l in _learnings) {
       await ProgressService.saveProgress(l.id, 0, l.total);
     }
-  }
-
-  /// 🔹 Load toàn bộ chữ cái từ JSON (assets/config/letters.json)
-  static Future<List<VnLetter>> loadLetters() async {
-    final raw = await rootBundle.loadString('assets/config/letters.json');
-    final List<dynamic> data = jsonDecode(raw);
-    return data.map((e) => VnLetter.fromJson(e)).toList();
   }
 }
