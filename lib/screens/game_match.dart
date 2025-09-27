@@ -61,7 +61,7 @@ class _GameMatchState extends GameBaseState<GameMatch>
 
   Future<void> _loadLetters() async {
     final String response =
-    await rootBundle.loadString('assets/config/letters.json');
+    await rootBundle.loadString('assets/configs/letters.json');
     final List<dynamic> data = json.decode(response);
 
     setState(() {

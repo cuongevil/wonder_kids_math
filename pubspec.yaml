@@ -40,3 +40,6 @@ flutter:
   assets:
     - assets/images/
     - assets/images/mascot/
+    - assets/images/numbers/
+    - assets/audios/numbers/
+    - assets/configs/

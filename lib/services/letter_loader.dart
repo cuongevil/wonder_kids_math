@@ -5,7 +5,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../models/vn_letter.dart';
 
 class LetterLoader {
-  static const String _jsonPath = 'assets/config/letters.json';
+  static const String _jsonPath = 'assets/configs/letters.json';
 
   /// Đọc JSON, map ra VnLetter và gắn sẵn image/audio path theo key
   static Future<List<VnLetter>> load() async {

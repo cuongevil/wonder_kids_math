@@ -107,7 +107,7 @@ class _StartScreenState extends State<StartScreen>
           builder: (context, snapshot) {
             final progress = snapshot.data ?? 0.0;
             return LearningButton(
-              info: l, // 👈 truyền nguyên object
+              info: l,
               progress: progress,
               onTap: () => Navigator.pushNamed(context, l.route),
             );

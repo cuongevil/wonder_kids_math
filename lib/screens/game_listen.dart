@@ -61,7 +61,7 @@ class _GameListenState extends GameBaseState<GameListen>
 
   Future<void> _loadLetters() async {
     final String response =
-    await rootBundle.loadString('assets/config/letters.json');
+    await rootBundle.loadString('assets/configs/letters.json');
     final List<dynamic> data = json.decode(response);
 
     setState(() {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wonder_kids_math/screens/learn_numbers.dart';
 
 import '../screens/addition_screen.dart';
 import '../screens/division_screen.dart';
@@ -7,7 +8,6 @@ import '../screens/game_find.dart';
 import '../screens/game_listen.dart';
 import '../screens/game_match.dart';
 import '../screens/multiplication_screen.dart';
-import '../screens/numbers_screen.dart';
 import '../screens/start_screen.dart';
 import '../screens/subtraction_screen.dart';
 
@@ -37,7 +37,7 @@ class AppRoutes {
 
       case numbers:
         return MaterialPageRoute(
-          builder: (_) => const NumbersScreen(),
+          builder: (_) => const LearnNumbersScreen(),
           settings: settings,
         );
 
