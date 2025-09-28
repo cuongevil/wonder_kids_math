@@ -1,47 +1,38 @@
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/level.dart';
 
 class ProgressService {
-  static const _prefix = "progress_";
+  static const _kOrientationKey = 'map_orientation';
+  static const _kLevelsKey = 'levels_v1';
 
-  /// Lưu tiến độ (số điểm, tổng số vòng)
-  static Future<void> saveProgress(String key, int score, int total) async {
+  /// Lưu orientation của map (vertical / horizontal)
+  static Future<void> saveOrientation(bool isVertical) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt("${_prefix}${key}_score", score);
-    await prefs.setInt("${_prefix}${key}_total", total);
+    await prefs.setString(_kOrientationKey, isVertical ? 'vertical' : 'horizontal');
   }
 
-  /// Tải tiến độ (trả về Map {score, total})
-  static Future<Map<String, int>> loadProgress(String key) async {
+  /// Load orientation map
+  static Future<bool> loadOrientation() async {
     final prefs = await SharedPreferences.getInstance();
-    final score = prefs.getInt("${_prefix}${key}_score") ?? 0;
-    final total = prefs.getInt("${_prefix}${key}_total") ?? 0;
-    return {"score": score, "total": total};
+    final v = prefs.getString(_kOrientationKey);
+    if (v == null) return true; // mặc định vertical
+    return v == 'vertical';
   }
 
-  /// Lấy progress dạng phần trăm (0.0–1.0)
-  static Future<double> getProgress(String key, int total) async {
+  /// Lưu danh sách level (tiến độ)
+  static Future<void> saveLevels(List<Level> levels) async {
     final prefs = await SharedPreferences.getInstance();
-    final score = prefs.getInt("${_prefix}${key}_score") ?? 0;
-    if (total <= 0) return 0.0;
-    return score / total;
+    final data = levels.map((e) => e.toJson()).toList();
+    await prefs.setString(_kLevelsKey, jsonEncode(data));
   }
 
-  /// Update nhanh (nếu chỉ cần lưu số câu đúng)
-  static Future<void> updateProgress(String key, int current) async {
+  /// Load danh sách level
+  static Future<List<Level>?> loadLevels() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt("${_prefix}${key}_score", current);
-  }
-
-  /// Lấy raw score
-  static Future<int> getRaw(String key) async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt("${_prefix}${key}_score") ?? 0;
-  }
-
-  /// Reset toàn bộ 1 key
-  static Future<void> reset(String key) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove("${_prefix}${key}_score");
-    await prefs.remove("${_prefix}${key}_total");
+    final s = prefs.getString(_kLevelsKey);
+    if (s == null) return null;
+    final list = (jsonDecode(s) as List).cast<Map<String, dynamic>>();
+    return list.map(Level.fromJson).toList();
   }
 }

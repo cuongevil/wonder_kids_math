@@ -2,53 +2,15 @@
   "numbers": [
     {
       "value": 0,
-      "label": "Không",
-      "image": "assets/images/numbers/0.png"
+      "text": "không",
+      "image": "assets/images/numbers/0.png",
+      "audio": "assets/audios/numbers/0.mp3"
     },
     {
       "value": 1,
-      "label": "Một",
-      "image": "assets/images/numbers/1.png"
-    },
-    {
-      "value": 2,
-      "label": "Hai",
-      "image": "assets/images/numbers/2.png"
-    },
-    {
-      "value": 3,
-      "label": "Ba",
-      "image": "assets/images/numbers/3.png"
-    },
-    {
-      "value": 4,
-      "label": "Bốn",
-      "image": "assets/images/numbers/4.png"
-    },
-    {
-      "value": 5,
-      "label": "Năm",
-      "image": "assets/images/numbers/5.png"
-    },
-    {
-      "value": 6,
-      "label": "Sáu",
-      "image": "assets/images/numbers/6.png"
-    },
-    {
-      "value": 7,
-      "label": "Bảy",
-      "image": "assets/images/numbers/7.png"
-    },
-    {
-      "value": 8,
-      "label": "Tám",
-      "image": "assets/images/numbers/8.png"
-    },
-    {
-      "value": 9,
-      "label": "Chín",
-      "image": "assets/images/numbers/9.png"
+      "text": "một",
+      "image": "assets/images/numbers/1.png",
+      "audio": "assets/audios/numbers/1.mp3"
     }
   ]
 }

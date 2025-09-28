@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
 
-class LearnNumbersScreen extends StatefulWidget {
-  const LearnNumbersScreen({super.key});
+class LearnNumbers20Screen extends StatefulWidget {
+  const LearnNumbers20Screen({super.key});
 
   @override
-  State<LearnNumbersScreen> createState() => _LearnNumbersScreenState();
+  State<LearnNumbers20Screen> createState() => _LearnNumbers20ScreenState();
 }
 
-class _LearnNumbersScreenState extends State<LearnNumbersScreen> {
+class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen> {
   List<dynamic> numbers = [];
   int currentIndex = 0;
   final AudioPlayer _player = AudioPlayer();
@@ -23,7 +23,7 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen> {
 
   Future<void> _loadNumbers() async {
     final String response =
-    await rootBundle.loadString('assets/configs/numbers.json');
+    await rootBundle.loadString('assets/configs/numbers_20.json');
     final data = await json.decode(response);
     setState(() {
       numbers = data["numbers"];
@@ -57,7 +57,7 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Làm quen số 0–10"),
+        title: const Text("Làm quen số 11–20"),
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,

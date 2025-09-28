@@ -1,0 +1,16 @@
+{
+  "numbers": [
+    {
+      "value": 11,
+      "text": "mười một",
+      "image": "assets/images/numbers/11.png",
+      "audio": "assets/audios/numbers/11.mp3"
+    },
+    {
+      "value": 12,
+      "text": "mười hai",
+      "image": "assets/images/numbers/12.png",
+      "audio": "assets/audios/numbers/12.mp3"
+    }
+  ]
+}
