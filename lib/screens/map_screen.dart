@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
+import 'package:confetti/confetti.dart';
+
 import '../models/level.dart';
 import '../services/progress_service.dart';
 import '../widgets/level_node.dart';
@@ -13,14 +16,38 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> {
+class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   MapOrientation _orientation = MapOrientation.vertical;
   List<Level> levels = [];
+
+  late ConfettiController _confettiController;
+  late AnimationController _mascotController;
+  late Animation<double> _mascotAnimation;
+
+  int mascotPosition = 0; // vị trí index hiện tại
+  int targetPosition = 0; // vị trí index sẽ đi đến
+  Path? _mascotPath;
 
   @override
   void initState() {
     super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+    _mascotController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    );
+    _mascotAnimation = Tween<double>(begin: 0, end: 0).animate(CurvedAnimation(
+      parent: _mascotController,
+      curve: Curves.easeInOut,
+    ));
     _init();
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    _mascotController.dispose();
+    super.dispose();
   }
 
   Future<void> _init() async {
@@ -82,10 +109,27 @@ class _MapScreenState extends State<MapScreen> {
     if (i != -1) {
       levels[i].state = LevelState.completed;
       levels[i].progress = 1.0;
+
       if (i + 1 < levels.length && levels[i + 1].state == LevelState.locked) {
         levels[i + 1].state = LevelState.playable;
         levels[i + 1].progress ??= 0.0;
       }
+
+      // 🚀 Tính vị trí start & end
+      final start = Offset(mascotPosition * 120.0, mascotPosition * 120.0);
+      final end = Offset(i * 120.0, i * 120.0);
+      _mascotPath = buildCurvePath(start, end, _orientation == MapOrientation.vertical);
+
+      _mascotAnimation = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(
+        parent: _mascotController,
+        curve: Curves.easeInOut,
+      ));
+
+      _mascotController.forward(from: 0).whenComplete(() {
+        mascotPosition = i;
+      });
+
+      _confettiController.play();
       await ProgressService.saveLevels(levels);
       setState(() {});
     }
@@ -95,7 +139,7 @@ class _MapScreenState extends State<MapScreen> {
   Widget build(BuildContext context) {
     if (levels.isEmpty) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()), // ⏳ loading
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -112,15 +156,55 @@ class _MapScreenState extends State<MapScreen> {
           ),
         ],
       ),
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFEDE7F6), Color(0xFFF3E5F5)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+      body: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 🌈 Background
+          DecoratedBox(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFE1F5FE), Color(0xFFFFF9C4)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+            child: isVertical ? _buildVertical() : _buildHorizontal(),
           ),
-        ),
-        child: isVertical ? _buildVertical() : _buildHorizontal(),
+
+          // 🎉 Confetti
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              shouldLoop: false,
+              colors: const [Colors.pink, Colors.blue, Colors.yellow, Colors.green],
+            ),
+          ),
+
+          // 🐻 Mascot + Magic Stars
+          if (_mascotPath != null)
+            AnimatedBuilder(
+              animation: _mascotAnimation,
+              builder: (context, child) {
+                final pos = positionAlongPath(_mascotPath!, _mascotAnimation.value);
+                return Stack(
+                  children: [
+                    ...buildStarsAlongPath(_mascotPath!, _mascotAnimation.value),
+                    Positioned(
+                      left: 20 + pos.dx,
+                      bottom: 40 + pos.dy,
+                      child: SizedBox(
+                        width: 80,
+                        height: 80,
+                        child: Lottie.asset('assets/images/mascot/mascot.png'),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+        ],
       ),
     );
   }
@@ -175,28 +259,98 @@ class _MapScreenState extends State<MapScreen> {
   }
 }
 
+/// --- MAGIC PATH HELPERS ---
+
+Path buildCurvePath(Offset start, Offset end, bool vertical) {
+  final path = Path()..moveTo(start.dx, start.dy);
+
+  if (start == end) {
+    // fix trường hợp path trống
+    path.lineTo(end.dx + 0.01, end.dy);
+    return path;
+  }
+
+  if (vertical) {
+    // ⛰️ Bậc thang leo núi
+    final midY = (start.dy + end.dy) / 2;
+    path.lineTo(start.dx, midY);
+    path.lineTo(end.dx, midY);
+    path.lineTo(end.dx, end.dy);
+  } else {
+    // 🌈 Cầu vồng ngang
+    final control1 = Offset((start.dx + end.dx) / 2, start.dy - 120);
+    final control2 = Offset((start.dx + end.dx) / 2, end.dy - 120);
+    path.cubicTo(control1.dx, control1.dy, control2.dx, control2.dy, end.dx, end.dy);
+  }
+
+  return path;
+}
+
+Offset positionAlongPath(Path path, double t) {
+  final metrics = path.computeMetrics();
+  if (metrics.isEmpty) return Offset.zero;
+
+  final metric = metrics.first;
+  final pos = metric.getTangentForOffset(metric.length * t);
+  return pos?.position ?? Offset.zero;
+}
+
+List<Widget> buildStarsAlongPath(Path path, double progress) {
+  final metrics = path.computeMetrics();
+  if (metrics.isEmpty) return [];
+
+  final metric = metrics.first;
+  final length = metric.length;
+  final stars = <Widget>[];
+
+  for (int i = 0; i < 5; i++) {
+    final t = progress - i * 0.1;
+    if (t > 0) {
+      final pos = metric.getTangentForOffset(length * t)?.position;
+      if (pos != null) {
+        stars.add(Positioned(
+          left: 20 + pos.dx,
+          bottom: 40 + pos.dy,
+          child: Opacity(
+            opacity: 1 - (progress - t),
+            child: Icon(
+              Icons.star,
+              size: 16,
+              color: Colors.yellowAccent.withOpacity(0.9),
+            ),
+          ),
+        ));
+      }
+    }
+  }
+  return stars;
+}
+
 class _ConnectorPainter extends CustomPainter {
   final bool vertical;
   _ConnectorPainter({required this.vertical});
 
   @override
   void paint(Canvas canvas, Size size) {
+    final gradient = LinearGradient(
+      colors: [Colors.pinkAccent, Colors.blueAccent, Colors.yellowAccent],
+    ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
     final p = Paint()
-      ..color = const Color(0xFFB39DDB)
-      ..strokeWidth = 4
-      ..style = PaintingStyle.stroke;
+      ..shader = gradient
+      ..strokeWidth = 6
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
 
     if (vertical) {
       final path = Path();
       path.moveTo(size.width / 2, 0);
-      path.cubicTo(size.width / 2, size.height * 0.25, size.width / 2,
-          size.height * 0.75, size.width / 2, size.height);
+      path.lineTo(size.width / 2, size.height);
       canvas.drawPath(path, p);
     } else {
       final path = Path();
       path.moveTo(0, size.height / 2);
-      path.cubicTo(size.width * 0.25, size.height / 2, size.width * 0.75,
-          size.height / 2, size.width, size.height / 2);
+      path.lineTo(size.width, size.height / 2);
       canvas.drawPath(path, p);
     }
   }

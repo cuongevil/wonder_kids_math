@@ -1,84 +1,102 @@
 import 'package:flutter/material.dart';
 import '../models/level.dart';
-import 'glow_ring.dart';
 
-class LevelNode extends StatelessWidget {
+class LevelNode extends StatefulWidget {
   final Level level;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
 
-  const LevelNode({super.key, required this.level, this.onTap});
+  const LevelNode({super.key, required this.level, required this.onTap});
 
-  /// Màu nền theo loại level
-  Color _bgColor() {
-    switch (level.type) {
-      case LevelType.start:
-      case LevelType.end:
-        return const Color(0xFFE3F2FD);
-      case LevelType.boss:
-        return const Color(0xFFF3E5F5);
-      case LevelType.topic:
-        if (level.title.contains('So Sánh')) return const Color(0xFFE8F5E9);
-        return const Color(0xFFFFF8E1);
-    }
+  @override
+  State<LevelNode> createState() => _LevelNodeState();
+}
+
+class _LevelNodeState extends State<LevelNode>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
   }
 
-  /// Màu viền theo loại level
-  Color _borderColor() {
-    switch (level.type) {
-      case LevelType.start:
-      case LevelType.end:
-        return const Color(0xFF1E88E5);
-      case LevelType.boss:
-        return const Color(0xFF8E24AA);
-      case LevelType.topic:
-        if (level.title.contains('So Sánh')) return const Color(0xFF43A047);
-        return const Color(0xFFFB8C00);
-    }
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isCompleted = level.state == LevelState.completed;
-    final isLocked = level.state == LevelState.locked;
+    final lv = widget.level;
 
-    return InkWell(
-      onTap: isLocked ? null : onTap,
-      child: Column(
-        children: [
-          Stack(
-            alignment: Alignment.center,
+    Color bg;
+    IconData icon;
+    switch (lv.state) {
+      case LevelState.locked:
+        bg = Colors.grey.shade400;
+        icon = Icons.lock;
+        break;
+      case LevelState.playable:
+        bg = Colors.orangeAccent;
+        icon = Icons.play_arrow;
+        break;
+      case LevelState.completed:
+        bg = Colors.greenAccent;
+        icon = Icons.check;
+        break;
+    }
+
+    return ScaleTransition(
+      scale: lv.state == LevelState.playable
+          ? Tween(begin: 0.9, end: 1.1).animate(CurvedAnimation(
+          parent: _pulseController, curve: Curves.easeInOut))
+          : const AlwaysStoppedAnimation(1.0),
+      child: GestureDetector(
+        onTap: lv.state != LevelState.locked ? widget.onTap : null,
+        child: Container(
+          margin: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              colors: [
+                bg.withOpacity(0.9),
+                bg.withOpacity(0.6),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: bg.withOpacity(0.7),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              if (isCompleted) const GlowRing(size: 92),
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: _bgColor(),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: _borderColor(), width: 2),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  isLocked ? Icons.lock : (isCompleted ? Icons.check : Icons.play_arrow),
-                  size: 28,
-                  color: isLocked ? Colors.grey : _borderColor(),
+              Icon(icon, size: 36, color: Colors.white),
+              const SizedBox(height: 4),
+              Text(
+                lv.title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(blurRadius: 4, color: Colors.black45),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: 220,
-            child: Text(
-              level.title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: isLocked ? Colors.black54 : Colors.black87,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
