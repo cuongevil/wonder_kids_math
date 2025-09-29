@@ -45,8 +45,20 @@ flutter:
     - assets/images/balloon1.png
     - assets/images/balloon2.png
     - assets/images/balloon3.png
+    - assets/images/icon_apple.png
+    - assets/images/icon_tree.png
+    - assets/images/icon_bridge.png
+    - assets/images/icon_cave.png
+    - assets/images/icon_scale.png
+    - assets/images/icon_river.png
+    - assets/images/icon_desert.png
+    - assets/images/icon_city.png
+    - assets/images/icon_clock.png
+    - assets/images/icon_castle.png
+
     - assets/audios/
     - assets/audios/numbers/
+
     - assets/configs/
     - assets/configs/numbers.json
     - assets/configs/numbers_20.json

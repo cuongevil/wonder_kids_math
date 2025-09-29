@@ -1,103 +1,95 @@
 import 'package:flutter/material.dart';
 import '../models/level.dart';
 
-class LevelNode extends StatefulWidget {
+class LevelNode extends StatelessWidget {
   final Level level;
   final VoidCallback onTap;
 
   const LevelNode({super.key, required this.level, required this.onTap});
 
   @override
-  State<LevelNode> createState() => _LevelNodeState();
-}
-
-class _LevelNodeState extends State<LevelNode>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final lv = widget.level;
+    // chọn icon/image theo level
+    final iconPath = _getIconForLevel(level.index);
 
-    Color bg;
-    IconData icon;
-    switch (lv.state) {
-      case LevelState.locked:
-        bg = Colors.grey.shade400;
-        icon = Icons.lock;
+    // màu glow theo trạng thái
+    Color glowColor;
+    Widget childIcon;
+
+    switch (level.state) {
+      case LevelState.completed:
+        glowColor = Colors.greenAccent;
+        childIcon = const Icon(Icons.check, size: 40, color: Colors.white);
         break;
       case LevelState.playable:
-        bg = Colors.orangeAccent;
-        icon = Icons.play_arrow;
+        glowColor = Colors.orangeAccent;
+        childIcon = const Icon(Icons.play_arrow, size: 40, color: Colors.white);
         break;
-      case LevelState.completed:
-        bg = Colors.greenAccent;
-        icon = Icons.check;
+      case LevelState.locked:
+        glowColor = Colors.grey;
+        childIcon = const Icon(Icons.lock, size: 32, color: Colors.white70);
         break;
+      default:
+        glowColor = Colors.blueAccent;
+        childIcon = const Icon(Icons.circle, size: 32, color: Colors.white);
     }
 
-    return ScaleTransition(
-      scale: lv.state == LevelState.playable
-          ? Tween(begin: 0.9, end: 1.1).animate(CurvedAnimation(
-          parent: _pulseController, curve: Curves.easeInOut))
-          : const AlwaysStoppedAnimation(1.0),
-      child: GestureDetector(
-        onTap: lv.state != LevelState.locked ? widget.onTap : null,
-        child: Container(
-          margin: const EdgeInsets.all(12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: RadialGradient(
-              colors: [
-                bg.withOpacity(0.9),
-                bg.withOpacity(0.6),
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: bg.withOpacity(0.7),
-                blurRadius: 20,
-                spreadRadius: 5,
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+    return GestureDetector(
+      onTap: level.state == LevelState.playable ? onTap : null,
+      child: Container(
+        margin: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: glowColor.withOpacity(0.6),
+              blurRadius: 25,
+              spreadRadius: 5,
+            )
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Stack(
+            alignment: Alignment.center,
             children: [
-              Icon(icon, size: 36, color: Colors.white),
-              const SizedBox(height: 4),
-              Text(
-                lv.title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(blurRadius: 4, color: Colors.black45),
-                  ],
-                ),
-              ),
+              // icon riêng cho level
+              if (iconPath != null)
+                Image.asset(iconPath, width: 48, height: 48, fit: BoxFit.contain),
+              // overlay trạng thái
+              childIcon,
             ],
           ),
         ),
       ),
     );
+  }
+
+  String? _getIconForLevel(int index) {
+    switch (index) {
+      case 1:
+        return "assets/images/icon_apple.png"; // 🍎
+      case 2:
+        return "assets/images/icon_tree.png"; // 🌲
+      case 3:
+        return "assets/images/icon_bridge.png"; // 🌉
+      case 4:
+        return "assets/images/icon_cave.png"; // ⛰️
+      case 5:
+        return "assets/images/icon_scale.png"; // ⚖️
+      case 6:
+        return "assets/images/icon_river.png"; // 🌊
+      case 7:
+        return "assets/images/icon_desert.png"; // 🏜️
+      case 8:
+        return "assets/images/icon_city.png"; // 🏙️
+      case 9:
+        return "assets/images/icon_clock.png"; // ⏰
+      case 10:
+        return "assets/images/icon_castle.png"; // 🏰🐉
+      default:
+        return null;
+    }
   }
 }

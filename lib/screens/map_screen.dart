@@ -160,7 +160,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Hành Trình Leo Núi Toán Học ⛰️✨')),
+      appBar: AppBar(title: const Text('Bé học toán ⛰️✨')),
       body: Stack(
         alignment: Alignment.center,
         children: [
