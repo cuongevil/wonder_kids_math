@@ -55,6 +55,8 @@ flutter:
     - assets/images/icon_city.png
     - assets/images/icon_clock.png
     - assets/images/icon_castle.png
+    - assets/images/icon_start.png
+    - assets/images/icon_end.png
 
     - assets/audios/
     - assets/audios/numbers/
