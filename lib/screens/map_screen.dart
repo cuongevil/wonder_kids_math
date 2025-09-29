@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
 import 'package:confetti/confetti.dart';
+import 'package:audioplayers/audioplayers.dart'; // 👈 thêm import
 
 import '../models/level.dart';
 import '../services/progress_service.dart';
 import '../widgets/level_node.dart';
+import '../widgets/mascot_widget.dart';
+import '../widgets/map_background.dart';
+import '../widgets/sky_widget.dart';
 import 'level_detail.dart';
-
-enum MapOrientation { vertical, horizontal }
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -17,43 +18,56 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
-  MapOrientation _orientation = MapOrientation.vertical;
   List<Level> levels = [];
 
   late ConfettiController _confettiController;
-  late AnimationController _mascotController;
-  late Animation<double> _mascotAnimation;
+  late AnimationController _mascotIdleController;
+  late ScrollController _scrollController;
 
-  int mascotPosition = 0; // vị trí index hiện tại
-  int targetPosition = 0; // vị trí index sẽ đi đến
-  Path? _mascotPath;
+  late AudioPlayer _windPlayer;   // 🌬️ player cho tiếng gió
+  late AudioPlayer _birdPlayer;   // 🐦 player cho tiếng chim
+
+  int mascotPosition = 0;
 
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
     _confettiController = ConfettiController(duration: const Duration(seconds: 2));
-    _mascotController = AnimationController(
+    _mascotIdleController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
-    );
-    _mascotAnimation = Tween<double>(begin: 0, end: 0).animate(CurvedAnimation(
-      parent: _mascotController,
-      curve: Curves.easeInOut,
-    ));
+      duration: const Duration(seconds: 1),
+    )..repeat(reverse: true);
+
+    _windPlayer = AudioPlayer();
+    _birdPlayer = AudioPlayer();
+
+    _playBackgroundSounds(); // 👈 phát nhạc nền
+
     _init();
+  }
+
+  Future<void> _playBackgroundSounds() async {
+    // 🌬️ Gió loop
+    await _windPlayer.setReleaseMode(ReleaseMode.loop);
+    await _windPlayer.play(AssetSource("audios/wind_breeze.mp3"), volume: 0.4);
+
+    // 🐦 Chim loop
+    await _birdPlayer.setReleaseMode(ReleaseMode.loop);
+    await _birdPlayer.play(AssetSource("audios/birds_chirp.mp3"), volume: 0.6);
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _confettiController.dispose();
-    _mascotController.dispose();
+    _mascotIdleController.dispose();
+    _windPlayer.dispose();
+    _birdPlayer.dispose();
     super.dispose();
   }
 
   Future<void> _init() async {
-    final isVertical = await ProgressService.loadOrientation();
-    _orientation = isVertical ? MapOrientation.vertical : MapOrientation.horizontal;
-
     final saved = await ProgressService.loadLevels();
     if (saved != null) {
       levels = saved;
@@ -67,7 +81,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   List<Level> _defaultLevels() {
     return [
       Level(index: 0, title: 'Start 🚀', type: LevelType.start, state: LevelState.playable),
-      Level(index: 1, title: '1. Làng Số 0–10 🍎', type: LevelType.topic, state: LevelState.playable, progress: 0.0, route: '/learn_numbers'),
+      Level(index: 1, title: '1. Làng Số 0–10 🍎', type: LevelType.topic, state: LevelState.playable, route: '/learn_numbers'),
       Level(index: 2, title: '2. Rừng Số 11–20 🌲', type: LevelType.topic, state: LevelState.locked, route: '/learn_numbers_20'),
       Level(index: 3, title: '3. Cầu Cộng ≤10 🌉', type: LevelType.topic, state: LevelState.locked, route: '/game_addition10'),
       Level(index: 4, title: '4. Hang Trừ ≤10 ⛰️', type: LevelType.topic, state: LevelState.locked, route: '/game_subtraction10'),
@@ -79,15 +93,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       Level(index: 10, title: '10. Lâu Đài Boss Cuối 🏰🐉', type: LevelType.boss, state: LevelState.locked, route: '/game_final_boss'),
       Level(index: 11, title: 'End 🌟', type: LevelType.end, state: LevelState.locked),
     ];
-  }
-
-  Future<void> _toggleOrientation() async {
-    setState(() {
-      _orientation = _orientation == MapOrientation.vertical
-          ? MapOrientation.horizontal
-          : MapOrientation.vertical;
-    });
-    await ProgressService.saveOrientation(_orientation == MapOrientation.vertical);
   }
 
   void _openLevel(Level lv) async {
@@ -108,99 +113,77 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     final i = levels.indexWhere((e) => e.index == idx);
     if (i != -1) {
       levels[i].state = LevelState.completed;
-      levels[i].progress = 1.0;
 
       if (i + 1 < levels.length && levels[i + 1].state == LevelState.locked) {
         levels[i + 1].state = LevelState.playable;
-        levels[i + 1].progress ??= 0.0;
       }
 
-      // 🚀 Tính vị trí start & end
-      final start = Offset(mascotPosition * 120.0, mascotPosition * 120.0);
-      final end = Offset(i * 120.0, i * 120.0);
-      _mascotPath = buildCurvePath(start, end, _orientation == MapOrientation.vertical);
-
-      _mascotAnimation = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(
-        parent: _mascotController,
-        curve: Curves.easeInOut,
-      ));
-
-      _mascotController.forward(from: 0).whenComplete(() {
-        mascotPosition = i;
-      });
-
+      mascotPosition = i;
       _confettiController.play();
+      _showRewardPopup();
+
       await ProgressService.saveLevels(levels);
       setState(() {});
     }
   }
 
+  void _showRewardPopup() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("🎁 Bé nhận được Sticker mới!",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              const Icon(Icons.emoji_emotions, size: 64, color: Colors.orange),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Yeah!"),
+              )
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (levels.isEmpty) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final isVertical = _orientation == MapOrientation.vertical;
-
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isVertical ? 'Map Dọc (Mobile)' : 'Map Ngang'),
-        actions: [
-          IconButton(
-            tooltip: isVertical ? 'Chuyển sang ngang' : 'Chuyển sang dọc',
-            onPressed: _toggleOrientation,
-            icon: Icon(isVertical ? Icons.swap_horiz : Icons.swap_vert),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Hành Trình Leo Núi Toán Học ⛰️✨')),
       body: Stack(
         alignment: Alignment.center,
         children: [
-          // 🌈 Background
-          DecoratedBox(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFFE1F5FE), Color(0xFFFFF9C4)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-            child: isVertical ? _buildVertical() : _buildHorizontal(),
-          ),
-
-          // 🎉 Confetti
+          MapBackground(scrollController: _scrollController),
+          SkyWidget(currentLevel: mascotPosition),
+          _buildVertical(),
           Align(
             alignment: Alignment.topCenter,
             child: ConfettiWidget(
               confettiController: _confettiController,
               blastDirectionality: BlastDirectionality.explosive,
-              shouldLoop: false,
               colors: const [Colors.pink, Colors.blue, Colors.yellow, Colors.green],
             ),
           ),
-
-          // 🐻 Mascot + Magic Stars
-          if (_mascotPath != null)
+          if (levels.isNotEmpty)
             AnimatedBuilder(
-              animation: _mascotAnimation,
+              animation: _mascotIdleController,
               builder: (context, child) {
-                final pos = positionAlongPath(_mascotPath!, _mascotAnimation.value);
-                return Stack(
-                  children: [
-                    ...buildStarsAlongPath(_mascotPath!, _mascotAnimation.value),
-                    Positioned(
-                      left: 20 + pos.dx,
-                      bottom: 40 + pos.dy,
-                      child: SizedBox(
-                        width: 80,
-                        height: 80,
-                        child: Lottie.asset('assets/images/mascot/mascot.png'),
-                      ),
-                    ),
-                  ],
+                final bounce = 8 * _mascotIdleController.value;
+                return Positioned(
+                  left: MediaQuery.of(context).size.width / 2 - 30,
+                  top: mascotPosition * 140.0 + bounce,
+                  child: MascotWidget(position: Offset(0, 0)),
                 );
               },
             ),
@@ -211,150 +194,16 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   Widget _buildVertical() {
     return SingleChildScrollView(
+      controller: _scrollController,
       padding: const EdgeInsets.symmetric(vertical: 24),
       child: Column(
         children: [
           for (var i = 0; i < levels.length; i++) ...[
-            LevelNode(
-              level: levels[i],
-              onTap: () => _openLevel(levels[i]),
-            ),
-            if (i < levels.length - 1)
-              SizedBox(
-                height: 60,
-                child: CustomPaint(
-                  size: const Size(8, 60),
-                  painter: _ConnectorPainter(vertical: true),
-                ),
-              ),
+            LevelNode(level: levels[i], onTap: () => _openLevel(levels[i])),
+            if (i < levels.length - 1) const SizedBox(height: 60),
           ],
         ],
       ),
     );
   }
-
-  Widget _buildHorizontal() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (var i = 0; i < levels.length; i++) ...[
-            LevelNode(
-              level: levels[i],
-              onTap: () => _openLevel(levels[i]),
-            ),
-            if (i < levels.length - 1)
-              SizedBox(
-                width: 80,
-                child: CustomPaint(
-                  size: const Size(80, 8),
-                  painter: _ConnectorPainter(vertical: false),
-                ),
-              ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/// --- MAGIC PATH HELPERS ---
-
-Path buildCurvePath(Offset start, Offset end, bool vertical) {
-  final path = Path()..moveTo(start.dx, start.dy);
-
-  if (start == end) {
-    // fix trường hợp path trống
-    path.lineTo(end.dx + 0.01, end.dy);
-    return path;
-  }
-
-  if (vertical) {
-    // ⛰️ Bậc thang leo núi
-    final midY = (start.dy + end.dy) / 2;
-    path.lineTo(start.dx, midY);
-    path.lineTo(end.dx, midY);
-    path.lineTo(end.dx, end.dy);
-  } else {
-    // 🌈 Cầu vồng ngang
-    final control1 = Offset((start.dx + end.dx) / 2, start.dy - 120);
-    final control2 = Offset((start.dx + end.dx) / 2, end.dy - 120);
-    path.cubicTo(control1.dx, control1.dy, control2.dx, control2.dy, end.dx, end.dy);
-  }
-
-  return path;
-}
-
-Offset positionAlongPath(Path path, double t) {
-  final metrics = path.computeMetrics();
-  if (metrics.isEmpty) return Offset.zero;
-
-  final metric = metrics.first;
-  final pos = metric.getTangentForOffset(metric.length * t);
-  return pos?.position ?? Offset.zero;
-}
-
-List<Widget> buildStarsAlongPath(Path path, double progress) {
-  final metrics = path.computeMetrics();
-  if (metrics.isEmpty) return [];
-
-  final metric = metrics.first;
-  final length = metric.length;
-  final stars = <Widget>[];
-
-  for (int i = 0; i < 5; i++) {
-    final t = progress - i * 0.1;
-    if (t > 0) {
-      final pos = metric.getTangentForOffset(length * t)?.position;
-      if (pos != null) {
-        stars.add(Positioned(
-          left: 20 + pos.dx,
-          bottom: 40 + pos.dy,
-          child: Opacity(
-            opacity: 1 - (progress - t),
-            child: Icon(
-              Icons.star,
-              size: 16,
-              color: Colors.yellowAccent.withOpacity(0.9),
-            ),
-          ),
-        ));
-      }
-    }
-  }
-  return stars;
-}
-
-class _ConnectorPainter extends CustomPainter {
-  final bool vertical;
-  _ConnectorPainter({required this.vertical});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final gradient = LinearGradient(
-      colors: [Colors.pinkAccent, Colors.blueAccent, Colors.yellowAccent],
-    ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    final p = Paint()
-      ..shader = gradient
-      ..strokeWidth = 6
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    if (vertical) {
-      final path = Path();
-      path.moveTo(size.width / 2, 0);
-      path.lineTo(size.width / 2, size.height);
-      canvas.drawPath(path, p);
-    } else {
-      final path = Path();
-      path.moveTo(0, size.height / 2);
-      path.lineTo(size.width, size.height / 2);
-      canvas.drawPath(path, p);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -26,7 +26,7 @@ dev_dependencies:
     sdk: flutter
 
   flutter_lints: ^6.0.0
-  flutter_launcher_icons: ^0.13.1  # <--- thêm plugin sinh icon
+  flutter_launcher_icons: ^0.14.4  # <--- thêm plugin sinh icon
 
 flutter_icons:
   android: true
@@ -42,6 +42,11 @@ flutter:
     - assets/images/
     - assets/images/mascot/
     - assets/images/numbers/
+    - assets/images/balloon1.png
+    - assets/images/balloon2.png
+    - assets/images/balloon3.png
+    - assets/audios/
     - assets/audios/numbers/
+    - assets/configs/
     - assets/configs/numbers.json
     - assets/configs/numbers_20.json
