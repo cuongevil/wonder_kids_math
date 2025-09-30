@@ -6,12 +6,14 @@ class LevelNode extends StatefulWidget {
   final Level level;
   final VoidCallback onTap;
   final bool isCenter;
+  final bool isNight;
 
   const LevelNode({
     super.key,
     required this.level,
     required this.onTap,
     required this.isCenter,
+    required this.isNight,
   });
 
   @override
@@ -57,7 +59,6 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    // 🎨 màu node + icon theo trạng thái
     Color baseColor;
     Color bgColor;
     IconData stateIcon;
@@ -90,7 +91,6 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // 🌟 Glow gradient
                 Container(
                   width: 140,
                   height: 140,
@@ -105,13 +105,9 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
                     ),
                   ),
                 ),
-
-                // ✨ Sparkles
                 _buildSparkle(75, 1.0, 14, Colors.yellowAccent.withOpacity(0.9)),
                 _buildSparkle(60, -1.5, 12, Colors.white.withOpacity(0.8)),
                 _buildSparkle(85, 0.7, 16, Colors.orangeAccent.withOpacity(0.7)),
-
-                // 🌕 Node chính
                 Container(
                   width: 100,
                   height: 100,
@@ -123,19 +119,15 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      // số thứ tự
                       Text(
                         widget.level.index.toString(),
                         style: const TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
-                          shadows: [
-                            Shadow(color: Colors.black26, blurRadius: 4),
-                          ],
+                          shadows: [Shadow(color: Colors.black26, blurRadius: 4)],
                         ),
                       ),
-                      // icon trạng thái
                       Positioned(
                         bottom: 6,
                         right: 6,
@@ -151,11 +143,9 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
               ],
             ),
           ),
-
-          // 🏷 Label luôn hiển thị (nhưng scale + opacity khác nhau)
           const SizedBox(height: 6),
           AnimatedOpacity(
-            opacity: widget.isCenter ? 1.0 : 0.5,
+            opacity: widget.isCenter ? 1.0 : 0.6,
             duration: const Duration(milliseconds: 400),
             child: AnimatedScale(
               scale: widget.isCenter ? 1.1 : 0.9,
@@ -165,10 +155,16 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: widget.isCenter ? 16 : 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                  shadows: const [
+                  fontWeight: FontWeight.w700,
+                  color: widget.isNight ? Colors.white : Colors.black87,
+                  shadows: widget.isNight
+                      ? const [
+                    Shadow(color: Colors.black, blurRadius: 4),
+                    Shadow(color: Colors.white70, blurRadius: 6),
+                  ]
+                      : const [
                     Shadow(color: Colors.white, blurRadius: 3),
+                    Shadow(color: Colors.black45, blurRadius: 2),
                   ],
                 ),
               ),

@@ -23,6 +23,11 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   int mascotPosition = 0;
 
+  bool get isNight {
+    final hour = DateTime.now().hour;
+    return hour >= 18 || hour < 6;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -60,7 +65,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     }
     setState(() {});
 
-    // 🔧 sau khi build xong -> auto scroll để tránh bị che AppBar
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final topPadding = kToolbarHeight + MediaQuery.of(context).padding.top + 16;
       if (_scrollController.hasClients) {
@@ -71,18 +75,18 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   List<Level> _defaultLevels() {
     return [
-      Level(index: 0, title: 'Bắt đầu 🚀', type: LevelType.start, state: LevelState.playable),
-      Level(index: 1, title: 'Làng Số 0–10 🍎', type: LevelType.topic, state: LevelState.playable),
-      Level(index: 2, title: 'Rừng Số 11–20 🌲', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 3, title: 'Cầu Cộng ≤10 🌉', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 4, title: 'Hang Trừ ≤10 ⛰️', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 5, title: 'Đồng Bằng So Sánh ⚖️', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 6, title: 'Sông Cộng ≤20 🌊', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 7, title: 'Sa Mạc Trừ ≤20 🏜️', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 8, title: 'Thành Phố Hình Học 🏙️', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 9, title: 'Thung Lũng Đo Lường ⏰', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 10, title: 'Lâu Đài Boss Cuối 🏰🐉', type: LevelType.boss, state: LevelState.locked),
-      Level(index: 11, title: 'Kết thúc 🌟', type: LevelType.end, state: LevelState.locked),
+      Level(index: 0, title: 'Start 🚀', type: LevelType.start, state: LevelState.playable),
+      Level(index: 1, title: '1. Làng Số 0–10 🍎', type: LevelType.topic, state: LevelState.playable),
+      Level(index: 2, title: '2. Rừng Số 11–20 🌲', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 3, title: '3. Cầu Cộng ≤10 🌉', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 4, title: '4. Hang Trừ ≤10 ⛰️', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 5, title: '5. Đồng Bằng So Sánh ⚖️', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 6, title: '6. Sông Cộng ≤20 🌊', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 7, title: '7. Sa Mạc Trừ ≤20 🏜️', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 8, title: '8. Thành Phố Hình Học 🏙️', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 9, title: '9. Thung Lũng Đo Lường ⏰', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 10, title: '10. Lâu Đài Boss Cuối 🏰🐉', type: LevelType.boss, state: LevelState.locked),
+      Level(index: 11, title: 'End 🌟', type: LevelType.end, state: LevelState.locked),
     ];
   }
 
@@ -116,26 +120,19 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // 🔧 Layout config
-    const double spacing = 220; // khoảng cách lớn hơn để node to không đè nhau
-    const double nodeSize = 100; // node cơ bản (đồng bộ với LevelNode)
+    const double spacing = 240;
+    const double nodeSize = 100;
     const double maxScale = 1.1;
 
     final screenW = MediaQuery.of(context).size.width;
     final screenH = MediaQuery.of(context).size.height;
     final totalHeight = levels.length * spacing + 240;
 
-    // kích thước node sau khi bounce + glow padding
     const extraGlow = 40.0;
     final maxNodeSize = nodeSize * maxScale + extraGlow;
-
-    // biên độ sóng an toàn
     final safeAmplitude = (screenW - maxNodeSize) / 2 * 0.3;
 
-    // luôn cách mép ít nhất 8px
     const double minMargin = 8.0;
-
-    // dịch quỹ đạo sang trái
     const double bias = -40.0;
 
     final double topPadding = kToolbarHeight + MediaQuery.of(context).padding.top + 16;
@@ -155,9 +152,11 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           ),
         ),
         flexibleSpace: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF81D4FA), Color(0xFFF48FB1)],
+              colors: isNight
+                  ? [const Color(0xFF0D47A1), const Color(0xFF1A237E)] // đêm
+                  : [const Color(0xFF81D4FA), const Color(0xFFF48FB1)], // ngày
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -166,15 +165,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       ),
       body: Stack(
         children: [
-          // 🌄 Background
           Positioned.fill(
             child: MapBackground(
               scrollController: _scrollController,
               currentLevel: mascotPosition,
             ),
           ),
-
-          // 📜 Scroll map
           SingleChildScrollView(
             controller: _scrollController,
             child: SizedBox(
@@ -192,13 +188,13 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
                       final scale = (1.1 - (distance / screenH)).clamp(0.8, 1.1);
                       final opacity = (1.2 - (distance / (screenH * 0.7))).clamp(0.4, 1.0);
-
                       final isCenter = distance < 50;
 
                       Widget node = LevelNode(
                         level: levels[i],
                         onTap: () => _openLevel(levels[i]),
                         isCenter: isCenter,
+                        isNight: isNight,
                       );
 
                       if (isCenter) {
@@ -208,7 +204,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                         );
                       }
 
-                      // 🔧 vị trí ngang + clamp + margin + bias
                       double rawLeft = (screenW - nodeSize) / 2 + sin(i * 0.8) * safeAmplitude + bias;
                       double left = rawLeft.clamp(minMargin, screenW - nodeSize - minMargin);
 
@@ -228,8 +223,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               ),
             ),
           ),
-
-          // 🎉 Confetti
           Align(
             alignment: Alignment.topCenter,
             child: ConfettiWidget(
