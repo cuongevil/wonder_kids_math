@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../models/level.dart';
 import '../services/progress_service.dart';
 import '../widgets/level_node.dart';
-import '../widgets/sky_widget.dart';
+import '../widgets/map_background.dart'; // 👈 dùng background đã gộp
 import 'level_detail.dart';
 
 class MapScreen extends StatefulWidget {
@@ -100,7 +100,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     final totalHeight = levels.length * spacing + 220;
 
     return Scaffold(
-      extendBodyBehindAppBar: true, // 👈 SkyWidget phủ lên hết
+      extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -109,10 +109,15 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       ),
       body: Stack(
         children: [
-          /// SkyWidget luôn phủ toàn bộ
-          Positioned.fill(child: SkyWidget(currentLevel: mascotPosition)),
+          // 🌄 Background đã gộp (day/night + balloon + sparkle + núi + mây)
+          Positioned.fill(
+            child: MapBackground(
+              scrollController: _scrollController,
+              currentLevel: mascotPosition,
+            ),
+          ),
 
-          /// Scroll map
+          // 📜 Scroll map với các level
           SingleChildScrollView(
             controller: _scrollController,
             child: SizedBox(
@@ -134,7 +139,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             ),
           ),
 
-          /// Confetti ăn mừng
+          // 🎉 Confetti ăn mừng
           Align(
             alignment: Alignment.topCenter,
             child: ConfettiWidget(

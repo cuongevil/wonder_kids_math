@@ -10,6 +10,22 @@ class SkyWidget extends StatefulWidget {
   State<SkyWidget> createState() => _SkyWidgetState();
 }
 
+class FallingItem {
+  final IconData icon;
+  final Color color;
+  final double startX;
+  final double size;
+  final AnimationController controller;
+
+  FallingItem({
+    required this.icon,
+    required this.color,
+    required this.startX,
+    required this.size,
+    required this.controller,
+  });
+}
+
 class _SkyWidgetState extends State<SkyWidget> with TickerProviderStateMixin {
   late AnimationController _cloudController;
   late AnimationController _fadeController;
@@ -27,14 +43,18 @@ class _SkyWidgetState extends State<SkyWidget> with TickerProviderStateMixin {
   late String _nextBalloon;
 
   late final List<Offset> _starPositions;
+  late final List<Offset> _sparklePositions;
+  final List<FallingItem> _fallingItems = [];
+
+  double _balloonYOffset = 0;
 
   @override
   void initState() {
     super.initState();
-
     final rnd = Random();
     _currentBalloon = balloons[rnd.nextInt(balloons.length)];
     _nextBalloon = balloons[rnd.nextInt(balloons.length)];
+    _balloonYOffset = 50 + rnd.nextDouble() * 120;
 
     _cloudController = AnimationController(vsync: this, duration: const Duration(seconds: 40))..repeat();
     _fadeController = AnimationController(vsync: this, duration: const Duration(seconds: 3));
@@ -47,13 +67,61 @@ class _SkyWidgetState extends State<SkyWidget> with TickerProviderStateMixin {
           (_) => Offset(rnd.nextDouble() * 400, rnd.nextDouble() * 300),
     );
 
+    _sparklePositions = List.generate(
+      8,
+          (_) {
+        final angle = rnd.nextDouble() * 2 * pi;
+        final r = 60 + rnd.nextDouble() * 30;
+        return Offset(cos(angle) * r, sin(angle) * r);
+      },
+    );
+
     Future.delayed(const Duration(seconds: 20), _changeBalloon);
+    _startAutoSpawn();
+  }
+
+  void _startAutoSpawn() {
+    final rnd = Random();
+    Future.delayed(Duration(seconds: 3 + rnd.nextInt(3)), () {
+      if (!mounted) return;
+      final width = MediaQuery.of(context).size.width;
+      final dx = width + 400;
+      final balloonX = (_cloudController.value * dx) * 0.4;
+      _spawnFallingItem(balloonX);
+      _startAutoSpawn();
+    });
+  }
+
+  void _spawnFallingItem(double balloonX) {
+    final rnd = Random();
+    final isHeart = rnd.nextBool();
+
+    final controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..forward();
+
+    final item = FallingItem(
+      icon: isHeart ? Icons.favorite : Icons.star,
+      color: isHeart ? Colors.pinkAccent : Colors.amber,
+      startX: balloonX + rnd.nextDouble() * 40 - 20,
+      size: 14 + rnd.nextDouble() * 8,
+      controller: controller,
+    );
+
+    controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _fallingItems.remove(item);
+        controller.dispose();
+      }
+    });
+
+    setState(() => _fallingItems.add(item));
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // preload để tránh nháy
     for (final b in balloons) {
       precacheImage(AssetImage(b), context);
     }
@@ -76,6 +144,9 @@ class _SkyWidgetState extends State<SkyWidget> with TickerProviderStateMixin {
     _swayController.dispose();
     _starController.dispose();
     _skyBodyController.dispose();
+    for (var item in _fallingItems) {
+      item.controller.dispose();
+    }
     super.dispose();
   }
 
@@ -106,24 +177,58 @@ class _SkyWidgetState extends State<SkyWidget> with TickerProviderStateMixin {
         Positioned(
           top: 80,
           left: skyBodyX - 50,
-          child: Container(
-            width: isDay ? 100 : 80,
-            height: isDay ? 100 : 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isDay ? Colors.yellow : Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: isDay ? Colors.orange : Colors.white,
-                  blurRadius: 40,
-                  spreadRadius: 10,
+          child: Stack(
+            children: [
+              Container(
+                width: isDay ? 100 : 80,
+                height: isDay ? 100 : 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isDay ? Colors.yellow : Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDay ? Colors.orange : Colors.white,
+                      blurRadius: 40,
+                      spreadRadius: 10,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              for (var pos in _sparklePositions)
+                Positioned(
+                  left: 40 + pos.dx,
+                  top: 40 + pos.dy,
+                  child: ScaleTransition(
+                    scale: Tween(begin: 0.5, end: 1.2).animate(
+                      CurvedAnimation(parent: _starController, curve: Curves.easeInOut),
+                    ),
+                    child: Icon(
+                      Icons.star,
+                      size: 10,
+                      color: isDay ? Colors.white70 : Colors.yellowAccent,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
 
-        // ✨ Stars
+        // 🎈 Balloon
+        Positioned(
+          left: (offset * 0.4) % dx + sway,
+          top: 160 + _balloonYOffset,
+          child: Stack(
+            children: [
+              Image.asset(_currentBalloon, width: 100, gaplessPlayback: true),
+              FadeTransition(
+                opacity: _fadeController,
+                child: Image.asset(_nextBalloon, width: 100, gaplessPlayback: true),
+              ),
+            ],
+          ),
+        ),
+
+        // ✨ Stars (night only)
         if (!isDay)
           for (var pos in _starPositions)
             Positioned(
@@ -139,53 +244,35 @@ class _SkyWidgetState extends State<SkyWidget> with TickerProviderStateMixin {
         Positioned(
           left: -300 + offset % dx,
           top: 80,
-          child: Image.asset(
-            "assets/images/cloud.png",
-            width: 130,
-            gaplessPlayback: true,
-          ),
+          child: Image.asset("assets/images/cloud.png", width: 130, gaplessPlayback: true),
         ),
         Positioned(
           right: -250 + offset % dx,
           top: 240,
-          child: Image.asset(
-            "assets/images/cloud.png",
-            width: 90,
-            gaplessPlayback: true,
-          ),
+          child: Image.asset("assets/images/cloud.png", width: 90, gaplessPlayback: true),
         ),
         Positioned(
           left: -200 + (offset * 1.5) % dx,
           top: 380,
-          child: Image.asset(
-            "assets/images/cloud.png",
-            width: 110,
-            gaplessPlayback: true,
-          ),
+          child: Image.asset("assets/images/cloud.png", width: 110, gaplessPlayback: true),
         ),
 
-        // 🎈 Balloon
-        Positioned(
-          left: (offset * 0.3) % dx + sway,
-          top: 60 + (offset * 0.1) % 200,
-          child: Stack(
-            children: [
-              Image.asset(
-                _currentBalloon,
-                width: 100,
-                gaplessPlayback: true,
-              ),
-              FadeTransition(
-                opacity: _fadeController,
-                child: Image.asset(
-                  _nextBalloon,
-                  width: 100,
-                  gaplessPlayback: true,
+        // ❤️⭐ Falling items
+        for (var item in _fallingItems)
+          AnimatedBuilder(
+            animation: item.controller,
+            builder: (context, _) {
+              final progress = item.controller.value;
+              return Positioned(
+                left: item.startX,
+                top: 200 + progress * 400,
+                child: Opacity(
+                  opacity: 1 - progress,
+                  child: Icon(item.icon, color: item.color, size: item.size),
                 ),
-              ),
-            ],
+              );
+            },
           ),
-        ),
       ],
     );
   }
@@ -197,12 +284,7 @@ class _SkyWidgetState extends State<SkyWidget> with TickerProviderStateMixin {
     return SizedBox.expand(
       child: Stack(
         children: [
-          /// 👉 Nền fallback trắng chống nháy xám
-          Positioned.fill(
-            child: Container(color: Colors.white),
-          ),
-
-          /// Gradient + animation
+          Positioned.fill(child: Container(color: Colors.white)),
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -219,9 +301,7 @@ class _SkyWidgetState extends State<SkyWidget> with TickerProviderStateMixin {
                   _starController,
                   _skyBodyController,
                 ]),
-                builder: (context, _) {
-                  return _buildSkyContent(width);
-                },
+                builder: (context, _) => _buildSkyContent(width),
               ),
             ),
           ),
