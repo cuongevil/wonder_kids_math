@@ -71,18 +71,18 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   List<Level> _defaultLevels() {
     return [
-      Level(index: 0, title: 'Start 🚀', type: LevelType.start, state: LevelState.playable),
-      Level(index: 1, title: '1. Làng Số 0–10 🍎', type: LevelType.topic, state: LevelState.playable),
-      Level(index: 2, title: '2. Rừng Số 11–20 🌲', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 3, title: '3. Cầu Cộng ≤10 🌉', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 4, title: '4. Hang Trừ ≤10 ⛰️', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 5, title: '5. Đồng Bằng So Sánh ⚖️', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 6, title: '6. Sông Cộng ≤20 🌊', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 7, title: '7. Sa Mạc Trừ ≤20 🏜️', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 8, title: '8. Thành Phố Hình Học 🏙️', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 9, title: '9. Thung Lũng Đo Lường ⏰', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 10, title: '10. Lâu Đài Boss Cuối 🏰🐉', type: LevelType.boss, state: LevelState.locked),
-      Level(index: 11, title: 'End 🌟', type: LevelType.end, state: LevelState.locked),
+      Level(index: 0, title: 'Bắt đầu 🚀', type: LevelType.start, state: LevelState.playable),
+      Level(index: 1, title: 'Làng Số 0–10 🍎', type: LevelType.topic, state: LevelState.playable),
+      Level(index: 2, title: 'Rừng Số 11–20 🌲', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 3, title: 'Cầu Cộng ≤10 🌉', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 4, title: 'Hang Trừ ≤10 ⛰️', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 5, title: 'Đồng Bằng So Sánh ⚖️', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 6, title: 'Sông Cộng ≤20 🌊', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 7, title: 'Sa Mạc Trừ ≤20 🏜️', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 8, title: 'Thành Phố Hình Học 🏙️', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 9, title: 'Thung Lũng Đo Lường ⏰', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 10, title: 'Lâu Đài Boss Cuối 🏰🐉', type: LevelType.boss, state: LevelState.locked),
+      Level(index: 11, title: 'Kết thúc 🌟', type: LevelType.end, state: LevelState.locked),
     ];
   }
 
@@ -117,19 +117,19 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     }
 
     // 🔧 Layout config
-    const double spacing = 220; // khoảng cách giữa các level
-    const double nodeSize = 80; // kích thước node cơ bản
+    const double spacing = 220; // khoảng cách lớn hơn để node to không đè nhau
+    const double nodeSize = 100; // node cơ bản (đồng bộ với LevelNode)
     const double maxScale = 1.1;
 
     final screenW = MediaQuery.of(context).size.width;
     final screenH = MediaQuery.of(context).size.height;
-    final totalHeight = levels.length * spacing + 220;
+    final totalHeight = levels.length * spacing + 240;
 
     // kích thước node sau khi bounce + glow padding
     const extraGlow = 40.0;
     final maxNodeSize = nodeSize * maxScale + extraGlow;
 
-    // biên độ sóng an toàn (giảm để node gần giữa hơn)
+    // biên độ sóng an toàn
     final safeAmplitude = (screenW - maxNodeSize) / 2 * 0.3;
 
     // luôn cách mép ít nhất 8px
@@ -198,37 +198,13 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                       Widget node = LevelNode(
                         level: levels[i],
                         onTap: () => _openLevel(levels[i]),
+                        isCenter: isCenter,
                       );
 
                       if (isCenter) {
-                        Color glowColor;
-                        switch (levels[i].state) {
-                          case LevelState.completed:
-                            glowColor = Colors.greenAccent;
-                            break;
-                          case LevelState.playable:
-                            glowColor = Colors.yellowAccent;
-                            break;
-                          default:
-                            glowColor = Colors.grey;
-                        }
-
                         node = ScaleTransition(
                           scale: _bounceController,
-                          child: Container(
-                            padding: const EdgeInsets.all(12), // vòng sáng nhỏ hơn
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: glowColor.withOpacity(0.5),
-                                  blurRadius: 20,
-                                  spreadRadius: 8,
-                                ),
-                              ],
-                            ),
-                            child: node,
-                          ),
+                          child: node,
                         );
                       }
 

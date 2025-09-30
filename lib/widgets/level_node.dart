@@ -1,148 +1,181 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '../models/level.dart';
 
 class LevelNode extends StatefulWidget {
   final Level level;
   final VoidCallback onTap;
+  final bool isCenter;
 
-  const LevelNode({super.key, required this.level, required this.onTap});
+  const LevelNode({
+    super.key,
+    required this.level,
+    required this.onTap,
+    required this.isCenter,
+  });
 
   @override
   State<LevelNode> createState() => _LevelNodeState();
 }
 
-class _LevelNodeState extends State<LevelNode>
-    with TickerProviderStateMixin {
-  late AnimationController _pulseController;
-  late AnimationController _sparkleController;
+class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
+  late final AnimationController _sparkleController;
 
   @override
   void initState() {
     super.initState();
-
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-      lowerBound: 0.9,
-      upperBound: 1.1,
-    );
-
     _sparkleController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
-    );
-
-    if (widget.level.state == LevelState.playable) {
-      _pulseController.repeat(reverse: true);
-      _sparkleController.repeat(reverse: true);
-    }
+      duration: const Duration(seconds: 6),
+    )..repeat();
   }
 
   @override
   void dispose() {
-    _pulseController.dispose();
     _sparkleController.dispose();
     super.dispose();
   }
 
+  Widget _buildSparkle(double radius, double speed, double size, Color color) {
+    return AnimatedBuilder(
+      animation: _sparkleController,
+      builder: (context, child) {
+        final angle = _sparkleController.value * 2 * pi * speed;
+        final dx = cos(angle) * radius;
+        final dy = sin(angle) * radius;
+        return Transform.translate(
+          offset: Offset(dx, dy),
+          child: Icon(
+            Icons.star,
+            size: size,
+            color: color,
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final level = widget.level;
-
-    // gradient theo trạng thái
-    RadialGradient gradient;
+    // 🎨 màu node + icon theo trạng thái
+    Color baseColor;
+    Color bgColor;
     IconData stateIcon;
-    switch (level.state) {
+
+    switch (widget.level.state) {
       case LevelState.completed:
-        gradient = const RadialGradient(
-          colors: [Colors.greenAccent, Colors.teal],
-          center: Alignment.center,
-          radius: 0.9,
-        );
+        baseColor = Colors.greenAccent;
+        bgColor = Colors.green.shade400;
         stateIcon = Icons.check;
         break;
       case LevelState.playable:
-        gradient = const RadialGradient(
-          colors: [Colors.orangeAccent, Colors.deepOrange],
-          center: Alignment.center,
-          radius: 0.9,
-        );
+        baseColor = Colors.orangeAccent;
+        bgColor = Colors.orange.shade400;
         stateIcon = Icons.play_arrow;
         break;
-      case LevelState.locked:
-        gradient = const RadialGradient(
-          colors: [Colors.grey, Colors.black26],
-          center: Alignment.center,
-          radius: 0.9,
-        );
-        stateIcon = Icons.lock;
-        break;
       default:
-        gradient = const RadialGradient(
-          colors: [Colors.blue, Colors.lightBlueAccent],
-          center: Alignment.center,
-          radius: 0.9,
-        );
-        stateIcon = Icons.circle;
+        baseColor = Colors.grey;
+        bgColor = Colors.grey.shade600;
+        stateIcon = Icons.lock;
     }
 
-    final nodeContent = AnimatedBuilder(
-      animation: _sparkleController,
-      builder: (context, child) {
-        return Container(
-          margin: const EdgeInsets.all(18),
-          width: 140, // 👈 to hơn
-          height: 140,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: gradient,
-            boxShadow: [
-              BoxShadow(
-                color: gradient.colors.first.withOpacity(
-                    0.6 + 0.4 * _sparkleController.value),
-                blurRadius: 45, // 👈 glow to hơn
-                spreadRadius: 12,
-              )
-            ],
-          ),
-          child: Center(
+    return GestureDetector(
+      onTap: widget.level.state == LevelState.playable ? widget.onTap : null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 140,
+            height: 140,
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // icon lớn, mờ (watermark)
-                Opacity(
-                  opacity: 0.18,
-                  child: Icon(
-                    stateIcon,
-                    size: 100, // 👈 icon nền to
-                    color: Colors.white,
+                // 🌟 Glow gradient
+                Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        baseColor.withOpacity(0.6),
+                        baseColor.withOpacity(0.0),
+                      ],
+                      stops: const [0.6, 1.0],
+                    ),
                   ),
                 ),
-                // số level nổi bật
-                Text(
-                  level.index.toString(),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 48, // 👈 số to nổi bật
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(color: Colors.black54, blurRadius: 6),
+
+                // ✨ Sparkles
+                _buildSparkle(75, 1.0, 14, Colors.yellowAccent.withOpacity(0.9)),
+                _buildSparkle(60, -1.5, 12, Colors.white.withOpacity(0.8)),
+                _buildSparkle(85, 0.7, 16, Colors.orangeAccent.withOpacity(0.7)),
+
+                // 🌕 Node chính
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: bgColor,
+                    border: Border.all(color: Colors.white, width: 3),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // số thứ tự
+                      Text(
+                        widget.level.index.toString(),
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(color: Colors.black26, blurRadius: 4),
+                          ],
+                        ),
+                      ),
+                      // icon trạng thái
+                      Positioned(
+                        bottom: 6,
+                        right: 6,
+                        child: Icon(
+                          stateIcon,
+                          size: 22,
+                          color: Colors.white,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ],
             ),
           ),
-        );
-      },
-    );
 
-    return GestureDetector(
-      onTap: level.state == LevelState.playable ? widget.onTap : null,
-      child: level.state == LevelState.playable
-          ? ScaleTransition(scale: _pulseController, child: nodeContent)
-          : nodeContent,
+          // 🏷 Label luôn hiển thị (nhưng scale + opacity khác nhau)
+          const SizedBox(height: 6),
+          AnimatedOpacity(
+            opacity: widget.isCenter ? 1.0 : 0.5,
+            duration: const Duration(milliseconds: 400),
+            child: AnimatedScale(
+              scale: widget.isCenter ? 1.1 : 0.9,
+              duration: const Duration(milliseconds: 400),
+              child: Text(
+                widget.level.title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: widget.isCenter ? 16 : 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                  shadows: const [
+                    Shadow(color: Colors.white, blurRadius: 3),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
