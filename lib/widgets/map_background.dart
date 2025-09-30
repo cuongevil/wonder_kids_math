@@ -1,10 +1,17 @@
 import 'dart:math';
+import 'dart:ui'; // 👈 để dùng BackdropFilter
+
 import 'package:flutter/material.dart';
 
 class MapBackground extends StatefulWidget {
   final ScrollController scrollController;
   final int currentLevel;
-  const MapBackground({super.key, required this.scrollController, required this.currentLevel});
+
+  const MapBackground({
+    super.key,
+    required this.scrollController,
+    required this.currentLevel,
+  });
 
   @override
   State<MapBackground> createState() => _MapBackgroundState();
@@ -15,7 +22,13 @@ class CloudConfig {
   final double size;
   final double speed;
   final double opacity;
-  CloudConfig({required this.top, required this.size, required this.speed, required this.opacity});
+
+  CloudConfig({
+    required this.top,
+    required this.size,
+    required this.speed,
+    required this.opacity,
+  });
 }
 
 class FallingItem {
@@ -38,10 +51,16 @@ class ShootingStar {
   final AnimationController controller;
   final double startX;
   final double startY;
-  ShootingStar({required this.controller, required this.startX, required this.startY});
+
+  ShootingStar({
+    required this.controller,
+    required this.startX,
+    required this.startY,
+  });
 }
 
-class _MapBackgroundState extends State<MapBackground> with TickerProviderStateMixin {
+class _MapBackgroundState extends State<MapBackground>
+    with TickerProviderStateMixin {
   late bool isNight;
 
   late AnimationController _fadeController;
@@ -49,6 +68,7 @@ class _MapBackgroundState extends State<MapBackground> with TickerProviderStateM
   late AnimationController _starController;
   late AnimationController _skyBodyController;
   late AnimationController _cloudController;
+  late AnimationController _overlayController; // 👈 breathing overlay
 
   final balloons = [
     "assets/images/balloon1.png",
@@ -78,21 +98,42 @@ class _MapBackgroundState extends State<MapBackground> with TickerProviderStateM
     _nextBalloon = balloons[rnd.nextInt(balloons.length)];
     _balloonYOffset = 50 + rnd.nextDouble() * 120;
 
-    _fadeController = AnimationController(vsync: this, duration: const Duration(seconds: 3));
-    _swayController = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat(reverse: true);
-    _starController = AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat(reverse: true);
-    _skyBodyController = AnimationController(vsync: this, duration: const Duration(seconds: 60))..repeat();
-    _cloudController = AnimationController(vsync: this, duration: const Duration(seconds: 120))..repeat();
-
-    _starPositions = List.generate(20, (_) => Offset(rnd.nextDouble() * 400, rnd.nextDouble() * 300));
-    _sparklePositions = List.generate(
-      8,
-          (_) {
-        final angle = rnd.nextDouble() * 2 * pi;
-        final r = 60 + rnd.nextDouble() * 30;
-        return Offset(cos(angle) * r, sin(angle) * r);
-      },
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
     );
+    _swayController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat(reverse: true);
+    _starController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+    _skyBodyController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 60),
+    )..repeat();
+    _cloudController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 120),
+    )..repeat();
+
+    // 👇 breathing overlay: ban ngày 6s, ban đêm 3s
+    _overlayController = AnimationController(
+      vsync: this,
+      duration: Duration(seconds: isNight ? 3 : 6),
+    )..repeat(reverse: true);
+
+    _starPositions = List.generate(
+      20,
+      (_) => Offset(rnd.nextDouble() * 400, rnd.nextDouble() * 300),
+    );
+    _sparklePositions = List.generate(8, (_) {
+      final angle = rnd.nextDouble() * 2 * pi;
+      final r = 60 + rnd.nextDouble() * 30;
+      return Offset(cos(angle) * r, sin(angle) * r);
+    });
 
     _clouds = List.generate(6 + rnd.nextInt(3), (_) {
       return CloudConfig(
@@ -114,7 +155,13 @@ class _MapBackgroundState extends State<MapBackground> with TickerProviderStateM
       final hourNow = DateTime.now().hour;
       final newIsNight = hourNow >= 18 || hourNow < 6;
       if (newIsNight != isNight) {
-        setState(() => isNight = newIsNight);
+        setState(() {
+          isNight = newIsNight;
+          // cập nhật nhịp thở theo ngày/đêm
+          _overlayController.duration = Duration(seconds: isNight ? 3 : 6);
+          _overlayController.reset();
+          _overlayController.repeat(reverse: true);
+        });
       }
       return mounted;
     });
@@ -171,7 +218,11 @@ class _MapBackgroundState extends State<MapBackground> with TickerProviderStateM
           duration: const Duration(seconds: 2),
         )..forward();
 
-        final star = ShootingStar(controller: controller, startX: startX, startY: startY);
+        final star = ShootingStar(
+          controller: controller,
+          startX: startX,
+          startY: startY,
+        );
 
         controller.addStatusListener((status) {
           if (status == AnimationStatus.completed) {
@@ -202,6 +253,7 @@ class _MapBackgroundState extends State<MapBackground> with TickerProviderStateM
     _starController.dispose();
     _skyBodyController.dispose();
     _cloudController.dispose();
+    _overlayController.dispose();
     for (var item in _fallingItems) {
       item.controller.dispose();
     }
@@ -243,19 +295,26 @@ class _MapBackgroundState extends State<MapBackground> with TickerProviderStateM
             left: skyBodyX - 60,
             child: Stack(
               children: [
-                Image.asset(isNight ? 'assets/images/moon.png' : 'assets/images/sun.png',
-                    width: 120),
+                Image.asset(
+                  isNight ? 'assets/images/moon.png' : 'assets/images/sun.png',
+                  width: 120,
+                ),
                 for (var pos in _sparklePositions)
                   Positioned(
                     left: 60 + pos.dx,
                     top: 60 + pos.dy,
                     child: ScaleTransition(
                       scale: Tween(begin: 0.5, end: 1.2).animate(
-                        CurvedAnimation(parent: _starController, curve: Curves.easeInOut),
+                        CurvedAnimation(
+                          parent: _starController,
+                          curve: Curves.easeInOut,
+                        ),
                       ),
-                      child: Icon(Icons.star,
-                          size: 10,
-                          color: isNight ? Colors.yellowAccent : Colors.white70),
+                      child: Icon(
+                        Icons.star,
+                        size: 10,
+                        color: isNight ? Colors.yellowAccent : Colors.white70,
+                      ),
                     ),
                   ),
               ],
@@ -300,7 +359,11 @@ class _MapBackgroundState extends State<MapBackground> with TickerProviderStateM
                 Image.asset(_currentBalloon, width: 100, gaplessPlayback: true),
                 FadeTransition(
                   opacity: _fadeController,
-                  child: Image.asset(_nextBalloon, width: 100, gaplessPlayback: true),
+                  child: Image.asset(
+                    _nextBalloon,
+                    width: 100,
+                    gaplessPlayback: true,
+                  ),
                 ),
               ],
             ),
@@ -336,7 +399,10 @@ class _MapBackgroundState extends State<MapBackground> with TickerProviderStateM
                       top: cloud.top,
                       child: Opacity(
                         opacity: cloud.opacity,
-                        child: Image.asset("assets/images/cloud.png", width: cloud.size),
+                        child: Image.asset(
+                          "assets/images/cloud.png",
+                          width: cloud.size,
+                        ),
                       ),
                     ),
                 ],
@@ -346,6 +412,29 @@ class _MapBackgroundState extends State<MapBackground> with TickerProviderStateM
 
           // 🏔️ Mountains
           _Mountains(isNight: isNight),
+
+          // 🔲 Overlay mờ + Blur thở nhẹ
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _overlayController,
+              builder: (context, _) {
+                final baseOpacity = isNight ? 0.45 : 0.25;
+                final extra = isNight ? 0.05 : 0.03; // ban đêm thở mạnh hơn
+                final breathingOpacity =
+                    baseOpacity +
+                    sin(_overlayController.value * 2 * pi) * extra;
+
+                return BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                  child: Container(
+                    color: Colors.black.withOpacity(
+                      breathingOpacity.clamp(0.2, 0.55),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -354,6 +443,7 @@ class _MapBackgroundState extends State<MapBackground> with TickerProviderStateM
 
 class _Mountains extends StatelessWidget {
   final bool isNight;
+
   const _Mountains({required this.isNight});
 
   @override

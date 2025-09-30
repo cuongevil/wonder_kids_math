@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 
@@ -32,7 +33,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 2),
+    );
     _bounceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -66,7 +69,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     setState(() {});
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final topPadding = kToolbarHeight + MediaQuery.of(context).padding.top + 16;
+      final topPadding =
+          kToolbarHeight + MediaQuery.of(context).padding.top + 16;
       if (_scrollController.hasClients) {
         _scrollController.jumpTo(topPadding);
       }
@@ -75,18 +79,78 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   List<Level> _defaultLevels() {
     return [
-      Level(index: 0, title: 'Start 🚀', type: LevelType.start, state: LevelState.playable),
-      Level(index: 1, title: '1. Làng Số 0–10 🍎', type: LevelType.topic, state: LevelState.playable),
-      Level(index: 2, title: '2. Rừng Số 11–20 🌲', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 3, title: '3. Cầu Cộng ≤10 🌉', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 4, title: '4. Hang Trừ ≤10 ⛰️', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 5, title: '5. Đồng Bằng So Sánh ⚖️', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 6, title: '6. Sông Cộng ≤20 🌊', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 7, title: '7. Sa Mạc Trừ ≤20 🏜️', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 8, title: '8. Thành Phố Hình Học 🏙️', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 9, title: '9. Thung Lũng Đo Lường ⏰', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 10, title: '10. Lâu Đài Boss Cuối 🏰🐉', type: LevelType.boss, state: LevelState.locked),
-      Level(index: 11, title: 'End 🌟', type: LevelType.end, state: LevelState.locked),
+      Level(
+        index: 0,
+        title: 'Bắt đầu',
+        type: LevelType.start,
+        state: LevelState.playable,
+      ),
+      Level(
+        index: 1,
+        title: 'Làng Số 0–10',
+        type: LevelType.topic,
+        state: LevelState.playable,
+      ),
+      Level(
+        index: 2,
+        title: 'Rừng Số 11–20',
+        type: LevelType.topic,
+        state: LevelState.locked,
+      ),
+      Level(
+        index: 3,
+        title: 'Cầu Cộng ≤10',
+        type: LevelType.topic,
+        state: LevelState.locked,
+      ),
+      Level(
+        index: 4,
+        title: 'Hang Trừ ≤10',
+        type: LevelType.topic,
+        state: LevelState.locked,
+      ),
+      Level(
+        index: 5,
+        title: 'Đồng Bằng So Sánh',
+        type: LevelType.topic,
+        state: LevelState.locked,
+      ),
+      Level(
+        index: 6,
+        title: 'Sông Cộng ≤20',
+        type: LevelType.topic,
+        state: LevelState.locked,
+      ),
+      Level(
+        index: 7,
+        title: 'Sa Mạc Trừ ≤20',
+        type: LevelType.topic,
+        state: LevelState.locked,
+      ),
+      Level(
+        index: 8,
+        title: 'Thành Phố Hình Học',
+        type: LevelType.topic,
+        state: LevelState.locked,
+      ),
+      Level(
+        index: 9,
+        title: 'Thung Lũng Đo Lường',
+        type: LevelType.topic,
+        state: LevelState.locked,
+      ),
+      Level(
+        index: 10,
+        title: 'Lâu Đài Boss Cuối',
+        type: LevelType.boss,
+        state: LevelState.locked,
+      ),
+      Level(
+        index: 11,
+        title: 'Kết thúc',
+        type: LevelType.end,
+        state: LevelState.locked,
+      ),
     ];
   }
 
@@ -135,7 +199,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     const double minMargin = 8.0;
     const double bias = -40.0;
 
-    final double topPadding = kToolbarHeight + MediaQuery.of(context).padding.top + 16;
+    final double topPadding =
+        kToolbarHeight + MediaQuery.of(context).padding.top + 16;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -179,46 +244,55 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               child: Stack(
                 children: [
                   for (var i = 0; i < levels.length; i++)
-                    Builder(builder: (context) {
-                      final levelTop = i * spacing + topPadding;
-                      final centerY = _scrollController.hasClients
-                          ? _scrollController.offset + screenH / 2
-                          : screenH / 2;
-                      final distance = (levelTop - centerY).abs();
+                    Builder(
+                      builder: (context) {
+                        final levelTop = i * spacing + topPadding;
+                        final centerY = _scrollController.hasClients
+                            ? _scrollController.offset + screenH / 2
+                            : screenH / 2;
+                        final distance = (levelTop - centerY).abs();
 
-                      final scale = (1.1 - (distance / screenH)).clamp(0.8, 1.1);
-                      final opacity = (1.2 - (distance / (screenH * 0.7))).clamp(0.4, 1.0);
-                      final isCenter = distance < 50;
-
-                      Widget node = LevelNode(
-                        level: levels[i],
-                        onTap: () => _openLevel(levels[i]),
-                        isCenter: isCenter,
-                        isNight: isNight,
-                      );
-
-                      if (isCenter) {
-                        node = ScaleTransition(
-                          scale: _bounceController,
-                          child: node,
+                        final scale = (1.1 - (distance / screenH)).clamp(
+                          0.8,
+                          1.1,
                         );
-                      }
+                        final opacity = (1.2 - (distance / (screenH * 0.7)))
+                            .clamp(0.4, 1.0);
+                        final isCenter = distance < 50;
 
-                      double rawLeft = (screenW - nodeSize) / 2 + sin(i * 0.8) * safeAmplitude + bias;
-                      double left = rawLeft.clamp(minMargin, screenW - nodeSize - minMargin);
+                        Widget node = LevelNode(
+                          level: levels[i],
+                          onTap: () => _openLevel(levels[i]),
+                          isCenter: isCenter,
+                          isNight: isNight,
+                        );
 
-                      return Positioned(
-                        top: levelTop,
-                        left: left,
-                        child: Transform.scale(
-                          scale: scale,
-                          child: Opacity(
-                            opacity: opacity,
+                        if (isCenter) {
+                          node = ScaleTransition(
+                            scale: _bounceController,
                             child: node,
+                          );
+                        }
+
+                        double rawLeft =
+                            (screenW - nodeSize) / 2 +
+                            sin(i * 0.8) * safeAmplitude +
+                            bias;
+                        double left = rawLeft.clamp(
+                          minMargin,
+                          screenW - nodeSize - minMargin,
+                        );
+
+                        return Positioned(
+                          top: levelTop,
+                          left: left,
+                          child: Transform.scale(
+                            scale: scale,
+                            child: Opacity(opacity: opacity, child: node),
                           ),
-                        ),
-                      );
-                    }),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
@@ -228,7 +302,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             child: ConfettiWidget(
               confettiController: _confettiController,
               blastDirectionality: BlastDirectionality.explosive,
-              colors: const [Colors.pink, Colors.blue, Colors.yellow, Colors.green],
+              colors: const [
+                Colors.pink,
+                Colors.blue,
+                Colors.yellow,
+                Colors.green,
+              ],
             ),
           ),
         ],

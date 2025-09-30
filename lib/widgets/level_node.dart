@@ -1,5 +1,7 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
+
 import '../models/level.dart';
 
 class LevelNode extends StatefulWidget {
@@ -47,11 +49,7 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
         final dy = sin(angle) * radius;
         return Transform.translate(
           offset: Offset(dx, dy),
-          child: Icon(
-            Icons.star,
-            size: size,
-            color: color,
-          ),
+          child: Icon(Icons.star, size: size, color: color),
         );
       },
     );
@@ -80,6 +78,19 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
         stateIcon = Icons.lock;
     }
 
+    // màu title theo state
+    Color titleColor;
+    switch (widget.level.state) {
+      case LevelState.completed:
+        titleColor = Colors.limeAccent;
+        break;
+      case LevelState.playable:
+        titleColor = Colors.amberAccent;
+        break;
+      default:
+        titleColor = Colors.grey.shade300;
+    }
+
     return GestureDetector(
       onTap: widget.level.state == LevelState.playable ? widget.onTap : null,
       child: Column(
@@ -105,9 +116,19 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
                     ),
                   ),
                 ),
-                _buildSparkle(75, 1.0, 14, Colors.yellowAccent.withOpacity(0.9)),
+                _buildSparkle(
+                  75,
+                  1.0,
+                  14,
+                  Colors.yellowAccent.withOpacity(0.9),
+                ),
                 _buildSparkle(60, -1.5, 12, Colors.white.withOpacity(0.8)),
-                _buildSparkle(85, 0.7, 16, Colors.orangeAccent.withOpacity(0.7)),
+                _buildSparkle(
+                  85,
+                  0.7,
+                  16,
+                  Colors.orangeAccent.withOpacity(0.7),
+                ),
                 Container(
                   width: 100,
                   height: 100,
@@ -125,17 +146,15 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
-                          shadows: [Shadow(color: Colors.black26, blurRadius: 4)],
+                          shadows: [
+                            Shadow(color: Colors.black26, blurRadius: 4),
+                          ],
                         ),
                       ),
                       Positioned(
                         bottom: 6,
                         right: 6,
-                        child: Icon(
-                          stateIcon,
-                          size: 22,
-                          color: Colors.white,
-                        ),
+                        child: Icon(stateIcon, size: 22, color: Colors.white),
                       ),
                     ],
                   ),
@@ -145,26 +164,47 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 6),
           AnimatedOpacity(
-            opacity: widget.isCenter ? 1.0 : 0.6,
+            opacity: widget.isCenter ? 1.0 : 0.7,
             duration: const Duration(milliseconds: 400),
             child: AnimatedScale(
-              scale: widget.isCenter ? 1.1 : 0.9,
-              duration: const Duration(milliseconds: 400),
+              scale: widget.isCenter ? 1.15 : 0.95,
+              duration: const Duration(seconds: 2),
+              curve: Curves.easeInOut,
               child: Text(
                 widget.level.title,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: widget.isCenter ? 16 : 14,
-                  fontWeight: FontWeight.w700,
-                  color: widget.isNight ? Colors.white : Colors.black87,
-                  shadows: widget.isNight
-                      ? const [
-                    Shadow(color: Colors.black, blurRadius: 4),
-                    Shadow(color: Colors.white70, blurRadius: 6),
-                  ]
-                      : const [
-                    Shadow(color: Colors.white, blurRadius: 3),
-                    Shadow(color: Colors.black45, blurRadius: 2),
+                  fontSize: widget.isCenter ? 18 : 16,
+                  fontWeight: FontWeight.w900,
+                  color: titleColor,
+                  shadows: [
+                    // viền đen rõ ràng
+                    const Shadow(
+                      offset: Offset(1, 1),
+                      blurRadius: 2,
+                      color: Colors.black87,
+                    ),
+                    const Shadow(
+                      offset: Offset(-1, -1),
+                      blurRadius: 2,
+                      color: Colors.black87,
+                    ),
+                    const Shadow(
+                      offset: Offset(1, -1),
+                      blurRadius: 2,
+                      color: Colors.black87,
+                    ),
+                    const Shadow(
+                      offset: Offset(-1, 1),
+                      blurRadius: 2,
+                      color: Colors.black87,
+                    ),
+                    // glow sáng cùng màu state
+                    Shadow(
+                      offset: Offset(0, 0),
+                      blurRadius: 8,
+                      color: titleColor.withOpacity(0.8),
+                    ),
                   ],
                 ),
               ),
