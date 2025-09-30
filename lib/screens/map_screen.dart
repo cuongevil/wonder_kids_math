@@ -37,7 +37,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
     _init();
 
-    // 👉 rebuild khi scroll để update scale/opacity/bounce
     _scrollController.addListener(() {
       if (mounted) setState(() {});
     });
@@ -60,6 +59,14 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       await ProgressService.saveLevels(levels);
     }
     setState(() {});
+
+    // 🔧 sau khi build xong -> auto scroll để tránh bị che AppBar
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final topPadding = kToolbarHeight + MediaQuery.of(context).padding.top + 16;
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(topPadding);
+      }
+    });
   }
 
   List<Level> _defaultLevels() {
@@ -109,11 +116,27 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    const double amplitude = 100;
-    const double spacing = 180;
+    // 🔧 Layout config
+    const double spacing = 220; // khoảng cách giữa các level
+    const double nodeSize = 80; // kích thước node cơ bản
+    const double maxScale = 1.1;
+
     final screenW = MediaQuery.of(context).size.width;
     final screenH = MediaQuery.of(context).size.height;
     final totalHeight = levels.length * spacing + 220;
+
+    // kích thước node sau khi bounce + glow padding
+    const extraGlow = 40.0;
+    final maxNodeSize = nodeSize * maxScale + extraGlow;
+
+    // biên độ sóng an toàn (giảm để node gần giữa hơn)
+    final safeAmplitude = (screenW - maxNodeSize) / 2 * 0.3;
+
+    // luôn cách mép ít nhất 8px
+    const double minMargin = 8.0;
+
+    // dịch quỹ đạo sang trái
+    const double bias = -40.0;
 
     final double topPadding = kToolbarHeight + MediaQuery.of(context).padding.top + 16;
 
@@ -122,19 +145,14 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         elevation: 0,
-        title: Row(
-          children: [
-            const SizedBox(width: 8),
-            const Text(
-              "Học toán",
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                shadows: [Shadow(color: Colors.black26, blurRadius: 4)],
-              ),
-            ),
-          ],
+        title: const Text(
+          "Học toán",
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            shadows: [Shadow(color: Colors.black26, blurRadius: 4)],
+          ),
         ),
         flexibleSpace: Container(
           decoration: const BoxDecoration(
@@ -172,11 +190,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                           : screenH / 2;
                       final distance = (levelTop - centerY).abs();
 
-                      // scale và opacity theo khoảng cách
                       final scale = (1.1 - (distance / screenH)).clamp(0.8, 1.1);
                       final opacity = (1.2 - (distance / (screenH * 0.7))).clamp(0.4, 1.0);
 
-                      // bounce nếu gần tâm
                       final isCenter = distance < 50;
 
                       Widget node = LevelNode(
@@ -185,15 +201,44 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                       );
 
                       if (isCenter) {
+                        Color glowColor;
+                        switch (levels[i].state) {
+                          case LevelState.completed:
+                            glowColor = Colors.greenAccent;
+                            break;
+                          case LevelState.playable:
+                            glowColor = Colors.yellowAccent;
+                            break;
+                          default:
+                            glowColor = Colors.grey;
+                        }
+
                         node = ScaleTransition(
                           scale: _bounceController,
-                          child: node,
+                          child: Container(
+                            padding: const EdgeInsets.all(12), // vòng sáng nhỏ hơn
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: glowColor.withOpacity(0.5),
+                                  blurRadius: 20,
+                                  spreadRadius: 8,
+                                ),
+                              ],
+                            ),
+                            child: node,
+                          ),
                         );
                       }
 
+                      // 🔧 vị trí ngang + clamp + margin + bias
+                      double rawLeft = (screenW - nodeSize) / 2 + sin(i * 0.8) * safeAmplitude + bias;
+                      double left = rawLeft.clamp(minMargin, screenW - nodeSize - minMargin);
+
                       return Positioned(
                         top: levelTop,
-                        left: screenW / 2 + sin(i * 0.8) * amplitude - 45,
+                        left: left,
                         child: Transform.scale(
                           scale: scale,
                           child: Opacity(
@@ -208,7 +253,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             ),
           ),
 
-          // 🎉 Confetti ăn mừng
+          // 🎉 Confetti
           Align(
             alignment: Alignment.topCenter,
             child: ConfettiWidget(
