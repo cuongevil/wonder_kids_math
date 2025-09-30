@@ -1,95 +1,107 @@
 import 'package:flutter/material.dart';
 import '../models/level.dart';
 
-class LevelNode extends StatelessWidget {
+class LevelNode extends StatefulWidget {
   final Level level;
   final VoidCallback onTap;
 
   const LevelNode({super.key, required this.level, required this.onTap});
 
   @override
+  State<LevelNode> createState() => _LevelNodeState();
+}
+
+class _LevelNodeState extends State<LevelNode>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+      lowerBound: 0.95,
+      upperBound: 1.05,
+    );
+
+    if (widget.level.state == LevelState.playable) {
+      _pulseController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // chọn icon/image theo level
-    final iconPath = _getIconForLevel(level.index);
+    final level = widget.level;
 
-    // màu glow theo trạng thái
-    Color glowColor;
-    Widget childIcon;
-
+    // gradient theo trạng thái
+    LinearGradient gradient;
+    IconData stateIcon;
     switch (level.state) {
       case LevelState.completed:
-        glowColor = Colors.greenAccent;
-        childIcon = const Icon(Icons.check, size: 40, color: Colors.white);
+        gradient = const LinearGradient(colors: [Colors.greenAccent, Colors.teal]);
+        stateIcon = Icons.check;
         break;
       case LevelState.playable:
-        glowColor = Colors.orangeAccent;
-        childIcon = const Icon(Icons.play_arrow, size: 40, color: Colors.white);
+        gradient = const LinearGradient(colors: [Colors.orange, Colors.amber]);
+        stateIcon = Icons.play_arrow;
         break;
       case LevelState.locked:
-        glowColor = Colors.grey;
-        childIcon = const Icon(Icons.lock, size: 32, color: Colors.white70);
+        gradient = const LinearGradient(colors: [Colors.grey, Colors.black26]);
+        stateIcon = Icons.lock;
         break;
       default:
-        glowColor = Colors.blueAccent;
-        childIcon = const Icon(Icons.circle, size: 32, color: Colors.white);
+        gradient = const LinearGradient(colors: [Colors.blue, Colors.lightBlueAccent]);
+        stateIcon = Icons.circle;
     }
 
-    return GestureDetector(
-      onTap: level.state == LevelState.playable ? onTap : null,
-      child: Container(
-        margin: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: glowColor.withOpacity(0.6),
-              blurRadius: 25,
-              spreadRadius: 5,
-            )
+    final content = AnimatedContainer(
+      duration: const Duration(milliseconds: 500),
+      margin: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: gradient,
+        boxShadow: [
+          BoxShadow(
+            color: gradient.colors.first.withOpacity(0.7),
+            blurRadius: 20,
+            spreadRadius: 4,
+          )
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(stateIcon, size: 40, color: Colors.white),
+            const SizedBox(height: 6),
+            Text(
+              level.index.toString(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                shadows: [Shadow(color: Colors.black45, blurRadius: 3)],
+              ),
+            ),
           ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // icon riêng cho level
-              if (iconPath != null)
-                Image.asset(iconPath, width: 48, height: 48, fit: BoxFit.contain),
-              // overlay trạng thái
-              childIcon,
-            ],
-          ),
         ),
       ),
     );
-  }
 
-  String? _getIconForLevel(int index) {
-    switch (index) {
-      case 1:
-        return "assets/images/icon_apple.png"; // 🍎
-      case 2:
-        return "assets/images/icon_tree.png"; // 🌲
-      case 3:
-        return "assets/images/icon_bridge.png"; // 🌉
-      case 4:
-        return "assets/images/icon_cave.png"; // ⛰️
-      case 5:
-        return "assets/images/icon_scale.png"; // ⚖️
-      case 6:
-        return "assets/images/icon_river.png"; // 🌊
-      case 7:
-        return "assets/images/icon_desert.png"; // 🏜️
-      case 8:
-        return "assets/images/icon_city.png"; // 🏙️
-      case 9:
-        return "assets/images/icon_clock.png"; // ⏰
-      case 10:
-        return "assets/images/icon_castle.png"; // 🏰🐉
-      default:
-        return null;
-    }
+    return GestureDetector(
+      onTap: level.state == LevelState.playable ? widget.onTap : null,
+      child: level.state == LevelState.playable
+          ? ScaleTransition(scale: _pulseController, child: content)
+          : content,
+    );
   }
 }

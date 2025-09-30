@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../models/level.dart';
 import '../services/progress_service.dart';
 import '../widgets/level_node.dart';
-import '../widgets/map_background.dart'; // 👈 dùng background đã gộp
+import '../widgets/map_background.dart';
 import 'level_detail.dart';
 
 class MapScreen extends StatefulWidget {
@@ -19,6 +19,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   List<Level> levels = [];
   late ConfettiController _confettiController;
   late ScrollController _scrollController;
+  late AnimationController _bounceController;
+
   int mascotPosition = 0;
 
   @override
@@ -26,13 +28,26 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     super.initState();
     _scrollController = ScrollController();
     _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+    _bounceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+      lowerBound: 0.95,
+      upperBound: 1.05,
+    )..repeat(reverse: true);
+
     _init();
+
+    // 👉 rebuild khi scroll để update scale/opacity/bounce
+    _scrollController.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
     _confettiController.dispose();
+    _bounceController.dispose();
     super.dispose();
   }
 
@@ -97,19 +112,43 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     const double amplitude = 100;
     const double spacing = 180;
     final screenW = MediaQuery.of(context).size.width;
+    final screenH = MediaQuery.of(context).size.height;
     final totalHeight = levels.length * spacing + 220;
+
+    final double topPadding = kToolbarHeight + MediaQuery.of(context).padding.top + 16;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text("Bé học toán ⛰️✨"),
+        title: Row(
+          children: [
+            const SizedBox(width: 8),
+            const Text(
+              "Học toán",
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                shadows: [Shadow(color: Colors.black26, blurRadius: 4)],
+              ),
+            ),
+          ],
+        ),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF81D4FA), Color(0xFFF48FB1)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
       ),
       body: Stack(
         children: [
-          // 🌄 Background đã gộp (day/night + balloon + sparkle + núi + mây)
+          // 🌄 Background
           Positioned.fill(
             child: MapBackground(
               scrollController: _scrollController,
@@ -117,7 +156,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             ),
           ),
 
-          // 📜 Scroll map với các level
+          // 📜 Scroll map
           SingleChildScrollView(
             controller: _scrollController,
             child: SizedBox(
@@ -126,14 +165,44 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               child: Stack(
                 children: [
                   for (var i = 0; i < levels.length; i++)
-                    Positioned(
-                      top: i * spacing,
-                      left: screenW / 2 + sin(i * 0.8) * amplitude - 45,
-                      child: LevelNode(
+                    Builder(builder: (context) {
+                      final levelTop = i * spacing + topPadding;
+                      final centerY = _scrollController.hasClients
+                          ? _scrollController.offset + screenH / 2
+                          : screenH / 2;
+                      final distance = (levelTop - centerY).abs();
+
+                      // scale và opacity theo khoảng cách
+                      final scale = (1.1 - (distance / screenH)).clamp(0.8, 1.1);
+                      final opacity = (1.2 - (distance / (screenH * 0.7))).clamp(0.4, 1.0);
+
+                      // bounce nếu gần tâm
+                      final isCenter = distance < 50;
+
+                      Widget node = LevelNode(
                         level: levels[i],
                         onTap: () => _openLevel(levels[i]),
-                      ),
-                    ),
+                      );
+
+                      if (isCenter) {
+                        node = ScaleTransition(
+                          scale: _bounceController,
+                          child: node,
+                        );
+                      }
+
+                      return Positioned(
+                        top: levelTop,
+                        left: screenW / 2 + sin(i * 0.8) * amplitude - 45,
+                        child: Transform.scale(
+                          scale: scale,
+                          child: Opacity(
+                            opacity: opacity,
+                            child: node,
+                          ),
+                        ),
+                      );
+                    }),
                 ],
               ),
             ),
