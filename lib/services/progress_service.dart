@@ -3,36 +3,34 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/level.dart';
 
 class ProgressService {
-  static const _kOrientationKey = 'map_orientation';
-  static const _kLevelsKey = 'levels_v1';
+  static const String _levelsKey = "levels";
 
-  /// Lưu orientation của map (vertical / horizontal)
-  static Future<void> saveOrientation(bool isVertical) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kOrientationKey, isVertical ? 'vertical' : 'horizontal');
-  }
-
-  /// Load orientation map
-  static Future<bool> loadOrientation() async {
-    final prefs = await SharedPreferences.getInstance();
-    final v = prefs.getString(_kOrientationKey);
-    if (v == null) return true; // mặc định vertical
-    return v == 'vertical';
-  }
-
-  /// Lưu danh sách level (tiến độ)
+  // Lưu danh sách level
   static Future<void> saveLevels(List<Level> levels) async {
     final prefs = await SharedPreferences.getInstance();
-    final data = levels.map((e) => e.toJson()).toList();
-    await prefs.setString(_kLevelsKey, jsonEncode(data));
+    final jsonData = jsonEncode(levels.map((e) => e.toJson()).toList());
+    await prefs.setString(_levelsKey, jsonData);
   }
 
-  /// Load danh sách level
+  // Load danh sách level
   static Future<List<Level>?> loadLevels() async {
     final prefs = await SharedPreferences.getInstance();
-    final s = prefs.getString(_kLevelsKey);
-    if (s == null) return null;
-    final list = (jsonDecode(s) as List).cast<Map<String, dynamic>>();
-    return list.map(Level.fromJson).toList();
+    final jsonData = prefs.getString(_levelsKey);
+    if (jsonData == null) return null;
+    final List<dynamic> decoded = jsonDecode(jsonData);
+    return decoded.map((e) => Level.fromJson(e)).toList();
+  }
+
+  // 🔹 Hàm reset về mặc định
+  static Future<void> resetLevels(List<Level> defaults) async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonData = jsonEncode(defaults.map((e) => e.toJson()).toList());
+    await prefs.setString(_levelsKey, jsonData);
+  }
+
+  // 🔹 Hàm xóa cache (nếu muốn clear hẳn)
+  static Future<void> clear() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_levelsKey);
   }
 }

@@ -38,7 +38,7 @@ class LevelDetail extends StatelessWidget {
             const SizedBox(height: 20),
             OutlinedButton.icon(
               icon: const Icon(Icons.arrow_back),
-              label: const Text("Quay lại Map"),
+              label: const Text("Quay lại"),
               onPressed: () {
                 Navigator.pop(context, false);
               },

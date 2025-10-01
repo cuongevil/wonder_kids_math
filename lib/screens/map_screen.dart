@@ -1,5 +1,4 @@
 import 'dart:math';
-
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 
@@ -33,9 +32,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    _confettiController = ConfettiController(
-      duration: const Duration(seconds: 2),
-    );
+    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
     _bounceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -67,101 +64,35 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       await ProgressService.saveLevels(levels);
     }
     setState(() {});
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final topPadding =
-          kToolbarHeight + MediaQuery.of(context).padding.top + 16;
-      if (_scrollController.hasClients) {
-        _scrollController.jumpTo(topPadding);
-      }
-    });
   }
 
   List<Level> _defaultLevels() {
     return [
-      Level(
-        index: 0,
-        title: 'Bắt đầu',
-        type: LevelType.start,
-        state: LevelState.playable,
-      ),
-      Level(
-        index: 1,
-        title: 'Làng Số 0–10',
-        type: LevelType.topic,
-        state: LevelState.playable,
-      ),
-      Level(
-        index: 2,
-        title: 'Rừng Số 11–20',
-        type: LevelType.topic,
-        state: LevelState.locked,
-      ),
-      Level(
-        index: 3,
-        title: 'Cầu Cộng ≤10',
-        type: LevelType.topic,
-        state: LevelState.locked,
-      ),
-      Level(
-        index: 4,
-        title: 'Hang Trừ ≤10',
-        type: LevelType.topic,
-        state: LevelState.locked,
-      ),
-      Level(
-        index: 5,
-        title: 'Đồng Bằng So Sánh',
-        type: LevelType.topic,
-        state: LevelState.locked,
-      ),
-      Level(
-        index: 6,
-        title: 'Sông Cộng ≤20',
-        type: LevelType.topic,
-        state: LevelState.locked,
-      ),
-      Level(
-        index: 7,
-        title: 'Sa Mạc Trừ ≤20',
-        type: LevelType.topic,
-        state: LevelState.locked,
-      ),
-      Level(
-        index: 8,
-        title: 'Thành Phố Hình Học',
-        type: LevelType.topic,
-        state: LevelState.locked,
-      ),
-      Level(
-        index: 9,
-        title: 'Thung Lũng Đo Lường',
-        type: LevelType.topic,
-        state: LevelState.locked,
-      ),
-      Level(
-        index: 10,
-        title: 'Lâu Đài Boss Cuối',
-        type: LevelType.boss,
-        state: LevelState.locked,
-      ),
-      Level(
-        index: 11,
-        title: 'Kết thúc',
-        type: LevelType.end,
-        state: LevelState.locked,
-      ),
+      Level(index: 0, title: 'Bắt đầu', type: LevelType.start, state: LevelState.playable),
+      Level(index: 1, title: 'Làng Số 0–10', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 2, title: 'Rừng Số 11–20', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 3, title: 'Cầu Cộng ≤10', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 4, title: 'Hang Trừ ≤10', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 5, title: 'Đồng Bằng So Sánh', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 6, title: 'Sông Cộng ≤20', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 7, title: 'Sa Mạc Trừ ≤20', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 8, title: 'Thành Phố Hình Học', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 9, title: 'Thung Lũng Đo Lường', type: LevelType.topic, state: LevelState.locked),
+      Level(index: 10, title: 'Lâu Đài Boss Cuối', type: LevelType.boss, state: LevelState.locked),
+      Level(index: 11, title: 'Kết thúc', type: LevelType.end, state: LevelState.locked),
     ];
   }
 
   void _openLevel(Level lv) async {
-    if (lv.state != LevelState.playable) return;
+    if (lv.state == LevelState.locked) return;
     final result = await Navigator.pushNamed(
       context,
       lv.route ?? LevelDetail.routeName,
       arguments: lv.index,
     );
-    if (result == true) _markCompleted(lv.index);
+    if (result == true && lv.state != LevelState.completed) {
+      _markCompleted(lv.index);
+    }
   }
 
   Future<void> _markCompleted(int idx) async {
@@ -176,6 +107,30 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       await ProgressService.saveLevels(levels);
       setState(() {});
     }
+  }
+
+  // 🔹 Debug menu actions
+  Future<void> _resetLevels() async {
+    levels = _defaultLevels();
+    await ProgressService.saveLevels(levels);
+    setState(() {});
+  }
+
+  Future<void> _clearCache() async {
+    await ProgressService.clear();
+    levels = _defaultLevels();
+    await ProgressService.saveLevels(levels);
+    setState(() {});
+  }
+
+  Future<void> _unlockAll() async {
+    for (var lv in levels) {
+      if (lv.state != LevelState.completed) {
+        lv.state = LevelState.playable;
+      }
+    }
+    await ProgressService.saveLevels(levels);
+    setState(() {});
   }
 
   @override
@@ -199,29 +154,35 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     const double minMargin = 8.0;
     const double bias = -40.0;
 
-    final double topPadding =
-        kToolbarHeight + MediaQuery.of(context).padding.top + 16;
+    final double topPadding = kToolbarHeight + MediaQuery.of(context).padding.top + 16;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         elevation: 0,
-        title: const Text(
-          "Học toán",
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            shadows: [Shadow(color: Colors.black26, blurRadius: 4)],
-          ),
-        ),
+        title: const Text("Học toán"),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.bug_report),
+            onSelected: (value) {
+              if (value == 'reset') _resetLevels();
+              if (value == 'clear') _clearCache();
+              if (value == 'unlock') _unlockAll();
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'reset', child: Text("Reset levels")),
+              const PopupMenuItem(value: 'clear', child: Text("Clear cache")),
+              const PopupMenuItem(value: 'unlock', child: Text("Unlock all")),
+            ],
+          )
+        ],
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: isNight
-                  ? [const Color(0xFF0D47A1), const Color(0xFF1A237E)] // đêm
-                  : [const Color(0xFF81D4FA), const Color(0xFFF48FB1)], // ngày
+                  ? [const Color(0xFF0D47A1), const Color(0xFF1A237E)]
+                  : [const Color(0xFF81D4FA), const Color(0xFFF48FB1)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -252,12 +213,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                             : screenH / 2;
                         final distance = (levelTop - centerY).abs();
 
-                        final scale = (1.1 - (distance / screenH)).clamp(
-                          0.8,
-                          1.1,
-                        );
-                        final opacity = (1.2 - (distance / (screenH * 0.7)))
-                            .clamp(0.4, 1.0);
+                        final scale = (1.1 - (distance / screenH)).clamp(0.8, 1.1);
+                        final opacity = (1.2 - (distance / (screenH * 0.7))).clamp(0.4, 1.0);
                         final isCenter = distance < 50;
 
                         Widget node = LevelNode(
@@ -275,13 +232,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                         }
 
                         double rawLeft =
-                            (screenW - nodeSize) / 2 +
-                            sin(i * 0.8) * safeAmplitude +
-                            bias;
-                        double left = rawLeft.clamp(
-                          minMargin,
-                          screenW - nodeSize - minMargin,
-                        );
+                            (screenW - nodeSize) / 2 + sin(i * 0.8) * safeAmplitude + bias;
+                        double left = rawLeft.clamp(minMargin, screenW - nodeSize - minMargin);
 
                         return Positioned(
                           top: levelTop,
@@ -302,12 +254,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             child: ConfettiWidget(
               confettiController: _confettiController,
               blastDirectionality: BlastDirectionality.explosive,
-              colors: const [
-                Colors.pink,
-                Colors.blue,
-                Colors.yellow,
-                Colors.green,
-              ],
+              colors: const [Colors.pink, Colors.blue, Colors.yellow, Colors.green],
             ),
           ),
         ],
