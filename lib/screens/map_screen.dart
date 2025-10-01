@@ -46,6 +46,10 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _scrollController.dispose();
+
+    _bounceController.stop();
+    _confettiController.stop();
+
     _confettiController.dispose();
     _bounceController.dispose();
     super.dispose();
@@ -59,22 +63,22 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       levels = _defaultLevels();
       await ProgressService.saveLevels(levels);
     }
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   List<Level> _defaultLevels() {
     return [
       Level(index: 0, title: 'Bắt đầu', type: LevelType.start, state: LevelState.playable),
-      Level(index: 1, title: 'Làng Số 0–10', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 2, title: 'Rừng Số 11–20', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 3, title: 'Cầu Cộng ≤10', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 4, title: 'Hang Trừ ≤10', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 5, title: 'Đồng Bằng So Sánh', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 6, title: 'Sông Cộng ≤20', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 7, title: 'Sa Mạc Trừ ≤20', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 8, title: 'Thành Phố Hình Học', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 9, title: 'Thung Lũng Đo Lường', type: LevelType.topic, state: LevelState.locked),
-      Level(index: 10, title: 'Lâu Đài Boss Cuối', type: LevelType.boss, state: LevelState.locked),
+      Level(index: 1, title: 'Làng Số 0–10', type: LevelType.topic, state: LevelState.locked, route: '/learn_numbers'),
+      Level(index: 2, title: 'Rừng Số 11–20', type: LevelType.topic, state: LevelState.locked, route: '/learn_numbers_20'),
+      Level(index: 3, title: 'Cầu Cộng ≤10', type: LevelType.topic, state: LevelState.locked, route: '/game_addition10'),
+      Level(index: 4, title: 'Hang Trừ ≤10', type: LevelType.topic, state: LevelState.locked, route: '/game_subtraction10'),
+      Level(index: 5, title: 'Đồng Bằng So Sánh', type: LevelType.topic, state: LevelState.locked, route: '/game_compare'),
+      Level(index: 6, title: 'Sông Cộng ≤20', type: LevelType.topic, state: LevelState.locked, route: '/game_addition20'),
+      Level(index: 7, title: 'Sa Mạc Trừ ≤20', type: LevelType.topic, state: LevelState.locked, route: '/game_subtraction20'),
+      Level(index: 8, title: 'Thành Phố Hình Học', type: LevelType.topic, state: LevelState.locked, route: '/game_shapes'),
+      Level(index: 9, title: 'Thung Lũng Đo Lường', type: LevelType.topic, state: LevelState.locked, route: '/game_measure_time'),
+      Level(index: 10, title: 'Lâu Đài Boss Cuối', type: LevelType.boss, state: LevelState.locked, route: '/game_final_boss'),
       Level(index: 11, title: 'Kết thúc', type: LevelType.end, state: LevelState.locked),
     ];
   }
@@ -99,34 +103,14 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         levels[i + 1].state = LevelState.playable;
       }
       mascotPosition = i;
-      _confettiController.play();
-      await ProgressService.saveLevels(levels);
-      setState(() {});
-    }
-  }
 
-  // 🔹 Debug menu actions
-  Future<void> _resetLevels() async {
-    levels = _defaultLevels();
-    await ProgressService.saveLevels(levels);
-    setState(() {});
-  }
-
-  Future<void> _clearCache() async {
-    await ProgressService.clear();
-    levels = _defaultLevels();
-    await ProgressService.saveLevels(levels);
-    setState(() {});
-  }
-
-  Future<void> _unlockAll() async {
-    for (var lv in levels) {
-      if (lv.state != LevelState.completed) {
-        lv.state = LevelState.playable;
+      if (mounted) {
+        _confettiController.play();
+        setState(() {});
       }
+
+      await ProgressService.saveLevels(levels);
     }
-    await ProgressService.saveLevels(levels);
-    setState(() {});
   }
 
   @override
@@ -154,21 +138,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
     return AppScaffold(
       title: "Học toán",
-      actions: [
-        PopupMenuButton<String>(
-          icon: const Icon(Icons.bug_report),
-          onSelected: (value) {
-            if (value == 'reset') _resetLevels();
-            if (value == 'clear') _clearCache();
-            if (value == 'unlock') _unlockAll();
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(value: 'reset', child: Text("Reset levels")),
-            const PopupMenuItem(value: 'clear', child: Text("Clear cache")),
-            const PopupMenuItem(value: 'unlock', child: Text("Unlock all")),
-          ],
-        )
-      ],
+      levels: levels,
+      onLevelsChanged: (updated) {
+        setState(() {
+          levels = updated;
+        });
+      },
       body: Stack(
         children: [
           Positioned.fill(
