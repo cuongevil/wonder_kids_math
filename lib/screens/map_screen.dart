@@ -6,6 +6,7 @@ import '../models/level.dart';
 import '../services/progress_service.dart';
 import '../widgets/level_node.dart';
 import '../widgets/map_background.dart';
+import '../widgets/app_scaffold.dart';
 import 'level_detail.dart';
 
 class MapScreen extends StatefulWidget {
@@ -22,11 +23,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   late AnimationController _bounceController;
 
   int mascotPosition = 0;
-
-  bool get isNight {
-    final hour = DateTime.now().hour;
-    return hour >= 18 || hour < 6;
-  }
 
   @override
   void initState() {
@@ -156,39 +152,23 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
     final double topPadding = kToolbarHeight + MediaQuery.of(context).padding.top + 16;
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        elevation: 0,
-        title: const Text("Học toán"),
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.bug_report),
-            onSelected: (value) {
-              if (value == 'reset') _resetLevels();
-              if (value == 'clear') _clearCache();
-              if (value == 'unlock') _unlockAll();
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'reset', child: Text("Reset levels")),
-              const PopupMenuItem(value: 'clear', child: Text("Clear cache")),
-              const PopupMenuItem(value: 'unlock', child: Text("Unlock all")),
-            ],
-          )
-        ],
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: isNight
-                  ? [const Color(0xFF0D47A1), const Color(0xFF1A237E)]
-                  : [const Color(0xFF81D4FA), const Color(0xFFF48FB1)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-      ),
+    return AppScaffold(
+      title: "Học toán",
+      actions: [
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.bug_report),
+          onSelected: (value) {
+            if (value == 'reset') _resetLevels();
+            if (value == 'clear') _clearCache();
+            if (value == 'unlock') _unlockAll();
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(value: 'reset', child: Text("Reset levels")),
+            const PopupMenuItem(value: 'clear', child: Text("Clear cache")),
+            const PopupMenuItem(value: 'unlock', child: Text("Unlock all")),
+          ],
+        )
+      ],
       body: Stack(
         children: [
           Positioned.fill(
@@ -221,7 +201,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                           level: levels[i],
                           onTap: () => _openLevel(levels[i]),
                           isCenter: isCenter,
-                          isNight: isNight,
+                          isNight: DateTime.now().hour >= 18 || DateTime.now().hour < 6,
                         );
 
                         if (isCenter) {

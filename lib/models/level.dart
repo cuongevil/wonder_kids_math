@@ -18,6 +18,7 @@ class Level {
     this.route,
   });
 
+  /// 🔹 Chuyển object -> JSON để lưu cache
   Map<String, dynamic> toJson() => {
     'index': index,
     'title': title,
@@ -27,6 +28,7 @@ class Level {
     'route': route,
   };
 
+  /// 🔹 Parse JSON -> object
   static Level fromJson(Map<String, dynamic> j) => Level(
     index: j['index'],
     title: j['title'],
