@@ -1,5 +1,8 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
+
+import 'base_screen.dart'; // ✅ dùng BaseScreen
 
 class GameAddition10Screen extends StatefulWidget {
   const GameAddition10Screen({super.key});
@@ -22,8 +25,8 @@ class _GameAddition10ScreenState extends State<GameAddition10Screen> {
   }
 
   void _newQuestion() {
-    a = _rand.nextInt(6) + 1; // 1-6
-    b = _rand.nextInt(6) + 1; // 1-6
+    a = _rand.nextInt(6) + 1; // 1–6
+    b = _rand.nextInt(6) + 1; // 1–6
     answer = a + b;
     options = [answer];
     while (options.length < 3) {
@@ -52,7 +55,7 @@ class _GameAddition10ScreenState extends State<GameAddition10Screen> {
               }
             },
             child: const Text("OK"),
-          )
+          ),
         ],
       ),
     );
@@ -60,23 +63,44 @@ class _GameAddition10ScreenState extends State<GameAddition10Screen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Phép cộng ≤10")),
-      body: Center(
+    return BaseScreen(
+      title: "Phép cộng ≤10",
+      child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text("$a + $b = ?", style: const TextStyle(fontSize: 40)),
+            Text(
+              "$a + $b = ?",
+              style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 20),
             Wrap(
               spacing: 16,
+              runSpacing: 12,
               children: options
                   .map(
                     (opt) => ElevatedButton(
-                  onPressed: () => _check(opt),
-                  child: Text("$opt", style: const TextStyle(fontSize: 24)),
-                ),
-              )
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        backgroundColor: Colors.deepPurpleAccent,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () => _check(opt),
+                      child: Text(
+                        "$opt",
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
           ],

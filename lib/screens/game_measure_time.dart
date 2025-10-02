@@ -1,5 +1,8 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
+
+import 'base_screen.dart'; // ✅ dùng BaseScreen
 
 class GameMeasureTimeScreen extends StatefulWidget {
   const GameMeasureTimeScreen({super.key});
@@ -35,11 +38,7 @@ class _GameMeasureTimeScreenState extends State<GameMeasureTimeScreen> {
       int h = _rand.nextInt(12) + 1;
       question = "Kim giờ chỉ mấy giờ?";
       answer = "$h giờ";
-      options = [
-        "$h giờ",
-        "${(h % 12) + 1} giờ",
-        "${(h + 3) % 12 + 1} giờ"
-      ];
+      options = ["$h giờ", "${(h % 12) + 1} giờ", "${(h + 3) % 12 + 1} giờ"];
       options.shuffle();
     }
     setState(() {});
@@ -63,7 +62,7 @@ class _GameMeasureTimeScreenState extends State<GameMeasureTimeScreen> {
               }
             },
             child: const Text("OK"),
-          )
+          ),
         ],
       ),
     );
@@ -71,25 +70,49 @@ class _GameMeasureTimeScreenState extends State<GameMeasureTimeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Đo lường & Thời gian")),
-      body: Center(
+    return BaseScreen(
+      title: "Đo lường & Thời gian",
+      child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(question,
-                style:
-                const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
+            Text(
+              question,
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurple,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 30),
             Wrap(
               spacing: 20,
+              runSpacing: 16,
               children: options
                   .map(
                     (opt) => ElevatedButton(
-                  onPressed: () => _check(opt),
-                  child: Text(opt, style: const TextStyle(fontSize: 20)),
-                ),
-              )
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 28,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        backgroundColor: Colors.orangeAccent,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () => _check(opt),
+                      child: Text(
+                        opt,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
           ],

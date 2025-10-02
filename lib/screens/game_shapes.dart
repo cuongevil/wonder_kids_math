@@ -1,5 +1,8 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
+
+import 'base_screen.dart'; // ✅ dùng BaseScreen
 
 class GameShapesScreen extends StatefulWidget {
   const GameShapesScreen({super.key});
@@ -39,9 +42,11 @@ class _GameShapesScreenState extends State<GameShapesScreen> {
       context: context,
       builder: (_) => AlertDialog(
         title: Text(correct ? "🎉 Giỏi quá!" : "❌ Sai mất rồi"),
-        content: Text(correct
-            ? "Đúng là ${currentShape["name"]}!"
-            : "Đáp án đúng: ${currentShape["name"]}"),
+        content: Text(
+          correct
+              ? "Đúng là ${currentShape["name"]}!"
+              : "Đáp án đúng: ${currentShape["name"]}",
+        ),
         actions: [
           TextButton(
             onPressed: () {
@@ -53,7 +58,7 @@ class _GameShapesScreenState extends State<GameShapesScreen> {
               }
             },
             child: const Text("OK"),
-          )
+          ),
         ],
       ),
     );
@@ -61,27 +66,41 @@ class _GameShapesScreenState extends State<GameShapesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Hình học cơ bản")),
-      body: Center(
+    return BaseScreen(
+      title: "Hình học cơ bản",
+      child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              currentShape["icon"],
-              size: 120,
-              color: Colors.deepPurple,
-            ),
-            const SizedBox(height: 20),
+            Icon(currentShape["icon"], size: 140, color: Colors.deepPurple),
+            const SizedBox(height: 30),
             Wrap(
-              spacing: 16,
+              spacing: 20,
+              runSpacing: 16,
               children: options
                   .map(
                     (s) => ElevatedButton(
-                  onPressed: () => _check(s["name"]),
-                  child: Text(s["name"], style: const TextStyle(fontSize: 20)),
-                ),
-              )
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 28,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        backgroundColor: Colors.tealAccent.shade400,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () => _check(s["name"]),
+                      child: Text(
+                        s["name"],
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
           ],

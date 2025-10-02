@@ -1,5 +1,8 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
+
+import 'base_screen.dart'; // ✅ dùng BaseScreen
 
 class GameAddition20Screen extends StatefulWidget {
   const GameAddition20Screen({super.key});
@@ -25,6 +28,7 @@ class _GameAddition20ScreenState extends State<GameAddition20Screen> {
     a = _rand.nextInt(11) + 5; // 5–15
     b = _rand.nextInt(11) + 5; // 5–15
     answer = a + b;
+
     options = [answer];
     while (options.length < 3) {
       int fake = _rand.nextInt(21) + 5; // 5–25
@@ -52,7 +56,7 @@ class _GameAddition20ScreenState extends State<GameAddition20Screen> {
               }
             },
             child: const Text("OK"),
-          )
+          ),
         ],
       ),
     );
@@ -60,23 +64,48 @@ class _GameAddition20ScreenState extends State<GameAddition20Screen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Phép cộng ≤20")),
-      body: Center(
+    return BaseScreen(
+      title: "Phép cộng ≤20",
+      child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text("$a + $b = ?", style: const TextStyle(fontSize: 40)),
-            const SizedBox(height: 20),
+            Text(
+              "$a + $b = ?",
+              style: const TextStyle(
+                fontSize: 44,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurple,
+              ),
+            ),
+            const SizedBox(height: 30),
             Wrap(
-              spacing: 16,
+              spacing: 18,
+              runSpacing: 14,
               children: options
                   .map(
                     (opt) => ElevatedButton(
-                  onPressed: () => _check(opt),
-                  child: Text("$opt", style: const TextStyle(fontSize: 24)),
-                ),
-              )
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 28,
+                          vertical: 18,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        backgroundColor: Colors.lightBlueAccent,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () => _check(opt),
+                      child: Text(
+                        "$opt",
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
           ],

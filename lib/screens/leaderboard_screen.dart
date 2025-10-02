@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'base_screen.dart';
+
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
 
@@ -8,7 +10,8 @@ class LeaderboardScreen extends StatefulWidget {
   State<LeaderboardScreen> createState() => _LeaderboardScreenState();
 }
 
-class _LeaderboardScreenState extends State<LeaderboardScreen> {
+class _LeaderboardScreenState extends State<LeaderboardScreen>
+    with SingleTickerProviderStateMixin {
   int myStars = 0;
   int myDiamonds = 0;
 
@@ -19,10 +22,17 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     {"name": "Tiger 🐯", "stars": 3, "diamonds": 40},
   ];
 
+  late AnimationController _animController;
+
   @override
   void initState() {
     super.initState();
     _loadMyData();
+
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..forward();
   }
 
   Future<void> _loadMyData() async {
@@ -34,7 +44,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       "name": "Bé của bạn 👩‍🎓",
       "stars": myStars,
       "diamonds": myDiamonds,
-      "isMe": true
+      "isMe": true,
     });
 
     players.sort((a, b) => b["stars"].compareTo(a["stars"]));
@@ -49,52 +59,83 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     return "🎯";
   }
 
+  Color getRankColor(int index) {
+    switch (index) {
+      case 0:
+        return Colors.amber; // 🥇
+      case 1:
+        return Colors.grey; // 🥈
+      case 2:
+        return Colors.brown; // 🥉
+      default:
+        return Colors.deepPurple;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.purple.shade50,
-      appBar: AppBar(
-        title: const Text("🏆 Bảng xếp hạng"),
-        centerTitle: true,
-        backgroundColor: Colors.purple.shade200,
-      ),
-      body: ListView.builder(
+    return BaseScreen(
+      title: "🏆 Bảng xếp hạng",
+      child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: players.length,
         itemBuilder: (context, index) {
           final player = players[index];
           final isMe = player["isMe"] == true;
 
-          return Card(
-            color: isMe ? Colors.green.shade100 : Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 3,
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: isMe ? Colors.green : Colors.deepPurple,
-                child: Text("${index + 1}",
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          return ScaleTransition(
+            scale: CurvedAnimation(
+              parent: _animController,
+              curve: Interval(
+                (index / players.length),
+                1.0,
+                curve: Curves.elasticOut,
               ),
-              title: Text(
-                "${player["name"]} ${getBadgeIcon(player["stars"])}",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: isMe ? Colors.green.shade900 : Colors.black,
+            ),
+            child: Card(
+              color: isMe ? Colors.green.shade100 : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: isMe ? 6 : 3,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: getRankColor(index),
+                  child: Text(
+                    "${index + 1}",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
+                title: Text(
+                  "${player["name"]} ${getBadgeIcon(player["stars"])}",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: isMe ? Colors.green.shade900 : Colors.black,
+                  ),
+                ),
+                subtitle: Text(
+                  "⭐ ${player["stars"]} | 💎 ${player["diamonds"]}",
+                  style: const TextStyle(fontSize: 16),
+                ),
+                trailing: isMe
+                    ? const Icon(Icons.person, color: Colors.green)
+                    : const Icon(Icons.child_care, color: Colors.purple),
               ),
-              subtitle: Text(
-                "⭐ ${player["stars"]} | 💎 ${player["diamonds"]}",
-                style: const TextStyle(fontSize: 16),
-              ),
-              trailing: isMe
-                  ? const Icon(Icons.person, color: Colors.green)
-                  : const Icon(Icons.child_care, color: Colors.purple),
             ),
           );
         },
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
   }
 }

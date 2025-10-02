@@ -1,5 +1,8 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
+
+import 'base_screen.dart'; // ✅ dùng BaseScreen
 
 class GameCompareScreen extends StatefulWidget {
   const GameCompareScreen({super.key});
@@ -26,9 +29,7 @@ class _GameCompareScreenState extends State<GameCompareScreen> {
   }
 
   void _check(String op) {
-    final correctOp = a == b
-        ? "="
-        : (a < b ? "<" : ">");
+    final correctOp = a == b ? "=" : (a < b ? "<" : ">");
     final correct = op == correctOp;
 
     showDialog(
@@ -47,7 +48,7 @@ class _GameCompareScreenState extends State<GameCompareScreen> {
               }
             },
             child: const Text("OK"),
-          )
+          ),
         ],
       ),
     );
@@ -55,23 +56,48 @@ class _GameCompareScreenState extends State<GameCompareScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("So sánh số")),
-      body: Center(
+    return BaseScreen(
+      title: "So sánh số",
+      child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text("$a ? $b", style: const TextStyle(fontSize: 40)),
-            const SizedBox(height: 20),
+            Text(
+              "$a ? $b",
+              style: const TextStyle(
+                fontSize: 48,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurple,
+              ),
+            ),
+            const SizedBox(height: 30),
             Wrap(
-              spacing: 20,
+              spacing: 24,
+              runSpacing: 16,
               children: ["<", "=", ">"]
                   .map(
                     (op) => ElevatedButton(
-                  onPressed: () => _check(op),
-                  child: Text(op, style: const TextStyle(fontSize: 32)),
-                ),
-              )
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.tealAccent.shade400,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 20,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      onPressed: () => _check(op),
+                      child: Text(
+                        op,
+                        style: const TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
           ],

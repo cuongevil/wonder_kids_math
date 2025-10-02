@@ -1,11 +1,15 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
+
+import 'base_screen.dart'; // ✅ dùng BaseScreen
 
 class GameSubtraction10Screen extends StatefulWidget {
   const GameSubtraction10Screen({super.key});
 
   @override
-  State<GameSubtraction10Screen> createState() => _GameSubtraction10ScreenState();
+  State<GameSubtraction10Screen> createState() =>
+      _GameSubtraction10ScreenState();
 }
 
 class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen> {
@@ -23,8 +27,9 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen> {
 
   void _newQuestion() {
     a = _rand.nextInt(10) + 1; // 1–10
-    b = _rand.nextInt(a + 1);  // đảm bảo b <= a
+    b = _rand.nextInt(a + 1); // đảm bảo b <= a
     answer = a - b;
+
     options = [answer];
     while (options.length < 3) {
       int fake = _rand.nextInt(10);
@@ -52,7 +57,7 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen> {
               }
             },
             child: const Text("OK"),
-          )
+          ),
         ],
       ),
     );
@@ -60,23 +65,48 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Phép trừ ≤10")),
-      body: Center(
+    return BaseScreen(
+      title: "Phép trừ ≤10",
+      child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text("$a – $b = ?", style: const TextStyle(fontSize: 40)),
+            Text(
+              "$a – $b = ?",
+              style: const TextStyle(
+                fontSize: 40,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurple,
+              ),
+            ),
             const SizedBox(height: 20),
             Wrap(
               spacing: 16,
+              runSpacing: 12,
               children: options
                   .map(
                     (opt) => ElevatedButton(
-                  onPressed: () => _check(opt),
-                  child: Text("$opt", style: const TextStyle(fontSize: 24)),
-                ),
-              )
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        backgroundColor: Colors.pinkAccent,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () => _check(opt),
+                      child: Text(
+                        "$opt",
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
           ],

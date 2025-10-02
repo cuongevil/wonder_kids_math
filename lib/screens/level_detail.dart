@@ -1,9 +1,10 @@
 import 'dart:math';
-import 'package:flutter/material.dart';
-import 'package:confetti/confetti.dart';
-import 'package:audioplayers/audioplayers.dart';
 
-import '../widgets/app_scaffold.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:confetti/confetti.dart';
+import 'package:flutter/material.dart';
+
+import 'base_screen.dart'; // 🔹 dùng BaseScreen
 
 class LevelDetail extends StatefulWidget {
   static const routeName = '/level_detail';
@@ -24,8 +25,9 @@ class _LevelDetailState extends State<LevelDetail>
   @override
   void initState() {
     super.initState();
-    _confettiController =
-        ConfettiController(duration: const Duration(seconds: 3));
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 3),
+    );
 
     _bounceController = AnimationController(
       vsync: this,
@@ -63,45 +65,35 @@ class _LevelDetailState extends State<LevelDetail>
 
   @override
   Widget build(BuildContext context) {
-    final int? levelIndex =
-    ModalRoute.of(context)?.settings.arguments as int?;
+    final int? levelIndex = ModalRoute.of(context)?.settings.arguments as int?;
     final bool isStartLevel = levelIndex == 0;
 
-    return AppScaffold(
-      title: isStartLevel ? "Chào mừng!" : "Chi tiết Level $levelIndex",
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFB3E5FC), Color(0xFFE1BEE7)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+    return BaseScreen(
+      title: isStartLevel ? "Xin chào" : "Chi tiết Level $levelIndex",
+      child: Stack(
+        children: [
+          Center(
+            child: isStartLevel
+                ? _buildStartScreen(context)
+                : _buildNormalLevel(context, levelIndex ?? -1),
           ),
-        ),
-        child: Stack(
-          children: [
-            Center(
-              child: isStartLevel
-                  ? _buildStartScreen(context)
-                  : _buildNormalLevel(context, levelIndex ?? -1),
-            ),
-            if (isStartLevel)
-              Align(
-                alignment: Alignment.topCenter,
-                child: ConfettiWidget(
-                  confettiController: _confettiController,
-                  blastDirectionality: BlastDirectionality.explosive,
-                  numberOfParticles: 25,
-                  gravity: 0.3,
-                  colors: const [
-                    Colors.pink,
-                    Colors.blue,
-                    Colors.yellow,
-                    Colors.green
-                  ],
-                ),
+          if (isStartLevel)
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                numberOfParticles: 25,
+                gravity: 0.3,
+                colors: const [
+                  Colors.pink,
+                  Colors.blue,
+                  Colors.yellow,
+                  Colors.green,
+                ],
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -142,7 +134,7 @@ class _LevelDetailState extends State<LevelDetail>
           const Text(
             "Cùng học số và phép tính thật vui nhé!",
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 18, color: Colors.black87),
+            style: TextStyle(fontSize: 18, color: Colors.lightGreenAccent),
           ),
           const SizedBox(height: 40),
           Container(
@@ -189,6 +181,7 @@ class _LevelDetailState extends State<LevelDetail>
     );
   }
 
+  /// 🔹 UI mặc định cho level thường
   Widget _buildNormalLevel(BuildContext context, int levelIndex) {
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -226,6 +219,7 @@ class _LevelDetailState extends State<LevelDetail>
     );
   }
 
+  /// 🔹 Hiệu ứng lấp lánh
   Widget _buildSparkle(double radius, double speed, Color color) {
     return AnimatedBuilder(
       animation: _sparkleController,
