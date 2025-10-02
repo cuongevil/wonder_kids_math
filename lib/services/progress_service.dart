@@ -12,13 +12,18 @@ class ProgressService {
     await prefs.setString(_levelsKey, jsonData);
   }
 
-  /// 🔹 Load danh sách level từ cache
-  static Future<List<Level>?> loadLevels() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonData = prefs.getString(_levelsKey);
-    if (jsonData == null) return null;
-    final List<dynamic> decoded = jsonDecode(jsonData);
-    return decoded.map((e) => Level.fromJson(e)).toList();
+  /// 🔹 Load danh sách level từ cache (luôn trả về List, không null)
+  static Future<List<Level>> loadLevels() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonData = prefs.getString(_levelsKey);
+      if (jsonData == null) return [];
+      final List<dynamic> decoded = jsonDecode(jsonData);
+      return decoded.map((e) => Level.fromJson(e)).toList();
+    } catch (e) {
+      // Nếu dữ liệu bị lỗi → reset sang rỗng
+      return [];
+    }
   }
 
   /// 🔹 Reset về mặc định

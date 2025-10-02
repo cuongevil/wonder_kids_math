@@ -46,18 +46,17 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _scrollController.dispose();
-
     _bounceController.stop();
     _confettiController.stop();
-
     _confettiController.dispose();
     _bounceController.dispose();
     super.dispose();
   }
 
+  /// 🔹 Khởi tạo dữ liệu level
   Future<void> _init() async {
     final saved = await ProgressService.loadLevels();
-    if (saved != null) {
+    if (saved.isNotEmpty) {
       levels = saved;
     } else {
       levels = _defaultLevels();
@@ -66,23 +65,25 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     if (mounted) setState(() {});
   }
 
+  /// 🔹 Danh sách level mặc định
   List<Level> _defaultLevels() {
     return [
       Level(index: 0, title: 'Bắt đầu', type: LevelType.start, state: LevelState.playable),
-      Level(index: 1, title: 'Làng Số 0–10', type: LevelType.topic, state: LevelState.locked, route: '/learn_numbers'),
-      Level(index: 2, title: 'Rừng Số 11–20', type: LevelType.topic, state: LevelState.locked, route: '/learn_numbers_20'),
-      Level(index: 3, title: 'Cầu Cộng ≤10', type: LevelType.topic, state: LevelState.locked, route: '/game_addition10'),
-      Level(index: 4, title: 'Hang Trừ ≤10', type: LevelType.topic, state: LevelState.locked, route: '/game_subtraction10'),
-      Level(index: 5, title: 'Đồng Bằng So Sánh', type: LevelType.topic, state: LevelState.locked, route: '/game_compare'),
-      Level(index: 6, title: 'Sông Cộng ≤20', type: LevelType.topic, state: LevelState.locked, route: '/game_addition20'),
-      Level(index: 7, title: 'Sa Mạc Trừ ≤20', type: LevelType.topic, state: LevelState.locked, route: '/game_subtraction20'),
-      Level(index: 8, title: 'Thành Phố Hình Học', type: LevelType.topic, state: LevelState.locked, route: '/game_shapes'),
-      Level(index: 9, title: 'Thung Lũng Đo Lường', type: LevelType.topic, state: LevelState.locked, route: '/game_measure_time'),
-      Level(index: 10, title: 'Lâu Đài Boss Cuối', type: LevelType.boss, state: LevelState.locked, route: '/game_final_boss'),
+      Level(index: 1, title: 'Số 0–10', type: LevelType.topic, state: LevelState.locked, route: '/learn_numbers'),
+      Level(index: 2, title: 'Số 11–20', type: LevelType.topic, state: LevelState.locked, route: '/learn_numbers_20'),
+      Level(index: 3, title: 'Cộng ≤10', type: LevelType.topic, state: LevelState.locked, route: '/game_addition10'),
+      Level(index: 4, title: 'Trừ ≤10', type: LevelType.topic, state: LevelState.locked, route: '/game_subtraction10'),
+      Level(index: 5, title: 'So Sánh', type: LevelType.topic, state: LevelState.locked, route: '/game_compare'),
+      Level(index: 6, title: 'Cộng ≤20', type: LevelType.topic, state: LevelState.locked, route: '/game_addition20'),
+      Level(index: 7, title: 'Trừ ≤20', type: LevelType.topic, state: LevelState.locked, route: '/game_subtraction20'),
+      Level(index: 8, title: 'Hình Học', type: LevelType.topic, state: LevelState.locked, route: '/game_shapes'),
+      Level(index: 9, title: 'Đo Lường', type: LevelType.topic, state: LevelState.locked, route: '/game_measure_time'),
+      Level(index: 10, title: 'Tổng hợp', type: LevelType.boss, state: LevelState.locked, route: '/game_final_boss'),
       Level(index: 11, title: 'Kết thúc', type: LevelType.end, state: LevelState.locked),
     ];
   }
 
+  /// 🔹 Mở 1 level
   void _openLevel(Level lv) async {
     if (lv.state == LevelState.locked) return;
     final result = await Navigator.pushNamed(
@@ -95,6 +96,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     }
   }
 
+  /// 🔹 Đánh dấu level hoàn thành
   Future<void> _markCompleted(int idx) async {
     final i = levels.indexWhere((e) => e.index == idx);
     if (i != -1) {
