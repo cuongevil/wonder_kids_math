@@ -171,11 +171,6 @@ class _LevelDetailState extends State<LevelDetail>
               },
             ),
           ),
-          const SizedBox(height: 16),
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Bỏ qua"),
-          ),
         ],
       ),
     );

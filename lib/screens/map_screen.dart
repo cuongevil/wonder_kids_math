@@ -62,24 +62,44 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       levels = _defaultLevels();
       await ProgressService.saveLevels(levels);
     }
-    if (mounted) setState(() {});
+
+    // 🔹 tìm index playable đầu tiên
+    final firstPlayableIndex = levels.indexWhere((e) => e.state == LevelState.playable);
+
+    if (mounted) {
+      setState(() {});
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients && firstPlayableIndex != -1) {
+          const spacing = 240.0;
+          final screenH = MediaQuery.of(context).size.height;
+          final topPadding = kToolbarHeight + MediaQuery.of(context).padding.top + 16;
+
+          final targetOffset =
+              firstPlayableIndex * spacing - screenH / 2 + spacing / 2 + topPadding;
+
+          _scrollController.jumpTo(
+            targetOffset.clamp(0, _scrollController.position.maxScrollExtent),
+          );
+        }
+      });
+    }
   }
 
   /// 🔹 Danh sách level mặc định
   List<Level> _defaultLevels() {
     return [
       Level(index: 0, title: 'Bắt đầu', type: LevelType.start, state: LevelState.playable),
-      Level(index: 1, title: 'Số 0–10', type: LevelType.topic, state: LevelState.playable, route: '/learn_numbers'),
-      Level(index: 2, title: 'Số 11–20', type: LevelType.topic, state: LevelState.playable, route: '/learn_numbers_20'),
-      Level(index: 3, title: 'Cộng ≤10', type: LevelType.topic, state: LevelState.playable, route: '/game_addition10'),
-      Level(index: 4, title: 'Trừ ≤10', type: LevelType.topic, state: LevelState.playable, route: '/game_subtraction10'),
-      Level(index: 5, title: 'So Sánh', type: LevelType.topic, state: LevelState.playable, route: '/game_compare'),
-      Level(index: 6, title: 'Cộng ≤20', type: LevelType.topic, state: LevelState.playable, route: '/game_addition20'),
-      Level(index: 7, title: 'Trừ ≤20', type: LevelType.topic, state: LevelState.playable, route: '/game_subtraction20'),
-      Level(index: 8, title: 'Hình Học', type: LevelType.topic, state: LevelState.playable, route: '/game_shapes'),
-      Level(index: 9, title: 'Đo Lường', type: LevelType.topic, state: LevelState.playable, route: '/game_measure_time'),
-      Level(index: 10, title: 'Tổng hợp', type: LevelType.boss, state: LevelState.playable, route: '/game_final_boss'),
-      Level(index: 11, title: 'Kết thúc', type: LevelType.end, state: LevelState.playable),
+      Level(index: 1, title: 'Số 0–10', type: LevelType.topic, state: LevelState.locked, route: '/learn_numbers'),
+      Level(index: 2, title: 'Số 11–20', type: LevelType.topic, state: LevelState.locked, route: '/learn_numbers_20'),
+      Level(index: 3, title: 'Cộng ≤10', type: LevelType.topic, state: LevelState.locked, route: '/game_addition10'),
+      Level(index: 4, title: 'Trừ ≤10', type: LevelType.topic, state: LevelState.locked, route: '/game_subtraction10'),
+      Level(index: 5, title: 'So Sánh', type: LevelType.topic, state: LevelState.locked, route: '/game_compare'),
+      Level(index: 6, title: 'Cộng ≤20', type: LevelType.topic, state: LevelState.locked, route: '/game_addition20'),
+      Level(index: 7, title: 'Trừ ≤20', type: LevelType.topic, state: LevelState.locked, route: '/game_subtraction20'),
+      Level(index: 8, title: 'Hình Học', type: LevelType.topic, state: LevelState.locked, route: '/game_shapes'),
+      Level(index: 9, title: 'Đo Lường', type: LevelType.topic, state: LevelState.locked, route: '/game_measure_time'),
+      Level(index: 10, title: 'Tổng hợp', type: LevelType.boss, state: LevelState.locked, route: '/game_final_boss'),
+      Level(index: 11, title: 'Kết thúc', type: LevelType.end, state: LevelState.locked),
     ];
   }
 
