@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
-import 'screens/map_screen.dart';
-import 'screens/level_detail.dart';
+import 'package:wonder_kids_math/screens/badge_collection_screen.dart';
+import 'package:wonder_kids_math/screens/leaderboard_screen.dart';
+import 'package:wonder_kids_math/screens/profile_screen.dart';
+
+import 'screens/game_addition10.dart';
+import 'screens/game_addition20.dart';
+import 'screens/game_compare.dart';
+import 'screens/game_final_boss.dart';
+import 'screens/game_measure_time.dart';
+import 'screens/game_shapes.dart';
+import 'screens/game_subtraction10.dart';
+import 'screens/game_subtraction20.dart';
 import 'screens/learn_numbers.dart';
 import 'screens/learn_numbers_20.dart';
-import 'screens/game_addition10.dart';
-import 'screens/game_subtraction10.dart';
-import 'screens/game_compare.dart';
-import 'screens/game_addition20.dart';
-import 'screens/game_subtraction20.dart';
-import 'screens/game_shapes.dart';
-import 'screens/game_measure_time.dart';
-import 'screens/game_final_boss.dart';
+import 'screens/level_detail.dart';
+import 'screens/map_screen.dart';
 
 void main() => runApp(const WonderKidsMathApp());
 
@@ -26,6 +30,9 @@ class WonderKidsMathApp extends StatelessWidget {
       routes: {
         '/': (_) => const MapScreen(),
         LevelDetail.routeName: (_) => const LevelDetail(),
+        '/profile': (_) => const ProfileScreen(),
+        '/leaderboard': (_) => const LeaderboardScreen(),
+        '/badges': (_) => const BadgeCollectionScreen(),
         '/learn_numbers': (_) => const LearnNumbersScreen(),
         '/learn_numbers_20': (_) => const LearnNumbers20Screen(),
         '/game_addition10': (_) => const GameAddition10Screen(),
