@@ -20,8 +20,11 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
     with TickerProviderStateMixin {
   List<dynamic> numbers = [];
   int currentIndex = 0;
-  int totalStars = 0; // ⭐ tổng tích lũy
-  int totalDiamonds = 0; // 💎 tích lũy khi nghe đọc
+  int totalStars = 0;
+
+  /// lưu index các số đã học để tránh cộng sao 2 lần
+  Set<int> learnedIndexes = {};
+
   final AudioPlayer _player = AudioPlayer();
 
   late AnimationController _mascotController;
@@ -47,6 +50,7 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+
     _mascotScale = Tween<double>(begin: 0.95, end: 1.05).animate(
       CurvedAnimation(parent: _mascotController, curve: Curves.easeInOut),
     );
@@ -57,18 +61,21 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
 
     _buttonAnimController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 800),
     );
-    _buttonScale = Tween<double>(begin: 1.0, end: 1.2).animate(
-      CurvedAnimation(parent: _buttonAnimController, curve: Curves.elasticOut),
+
+    _buttonScale = Tween<double>(begin: 0.9, end: 1.1).animate(
+      CurvedAnimation(parent: _buttonAnimController, curve: Curves.easeInOut),
     );
+
+    _buttonAnimController.repeat(reverse: true);
   }
 
   Future<void> _loadNumbers() async {
-    final String response = await rootBundle.loadString(
-      'assets/configs/numbers.json',
-    );
+    final String response =
+    await rootBundle.loadString('assets/configs/numbers.json');
     final data = await json.decode(response);
+
     setState(() {
       numbers = data["numbers"];
     });
@@ -78,45 +85,57 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       totalStars = prefs.getInt("totalStars") ?? 0;
-      totalDiamonds = prefs.getInt("totalDiamonds") ?? 0;
+      if (prefs.containsKey("learnedIndexes")) {
+        learnedIndexes =
+        Set<int>.from(jsonDecode(prefs.getString("learnedIndexes")!));
+      }
     });
   }
 
   Future<void> _saveProgress() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt("totalStars", totalStars);
-    await prefs.setInt("totalDiamonds", totalDiamonds);
+    await prefs.setString(
+        "learnedIndexes", jsonEncode(learnedIndexes.toList()));
+  }
+
+  /// đánh dấu 1 số là đã học
+  void _markLearned(int index) {
+    if (!learnedIndexes.contains(index)) {
+      setState(() {
+        learnedIndexes.add(index);
+        totalStars += 1;
+      });
+      _saveProgress();
+    }
   }
 
   void _next() {
     if (currentIndex < numbers.length - 1) {
-      setState(() => currentIndex++);
+      setState(() {
+        currentIndex++;
+      });
+      _markLearned(currentIndex);
     }
   }
 
   void _prev() {
     if (currentIndex > 0) {
-      setState(() => currentIndex--);
+      setState(() {
+        currentIndex--;
+      });
+      _markLearned(currentIndex);
     }
   }
 
   Future<void> _playAudio(String path) async {
     await _player.stop();
     await _player.play(AssetSource(path.replaceFirst('assets/', '')));
-    setState(() {
-      totalDiamonds += 1;
-    });
-    _saveProgress();
   }
 
   void _showRewardPopup() {
     final random = Random();
     final icon = rewardIcons[random.nextInt(rewardIcons.length)];
-
-    setState(() {
-      totalStars += 1;
-    });
-    _saveProgress();
 
     showDialog(
       context: context,
@@ -128,33 +147,23 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ScaleTransition(
-                scale: CurvedAnimation(
-                  parent: _buttonAnimController,
-                  curve: Curves.elasticOut,
-                ),
-                child: Column(
-                  children: [
-                    Icon(icon, size: 100, color: Colors.yellow),
-                    const SizedBox(height: 16),
-                    Text(
-                      "Tuyệt vời! Bạn được +1 ⭐\nTổng: ⭐ $totalStars | 💎 $totalDiamonds",
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        shadows: [
-                          Shadow(
-                            blurRadius: 10,
-                            color: Colors.black45,
-                            offset: Offset(2, 2),
-                          ),
-                        ],
-                      ),
-                      textAlign: TextAlign.center,
+              Icon(icon, size: 100, color: Colors.yellow),
+              const SizedBox(height: 16),
+              Text(
+                "Tuyệt vời! Bạn đã học xong\n⭐ $totalStars / ${numbers.length}",
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(
+                      blurRadius: 10,
+                      color: Colors.black45,
+                      offset: Offset(2, 2),
                     ),
                   ],
                 ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -174,82 +183,54 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    // đánh dấu số hiện tại là đã học
+    _markLearned(currentIndex);
+
     final item = numbers[currentIndex];
+    final size = MediaQuery.of(context).size;
+    final cardWidth = size.width * 0.85;
+    final cardPadding = size.width * 0.06;
+    final imageSize = size.width * 0.45;
+    final numberFont = size.width * 0.16;
+    final textFont = size.width * 0.075;
 
     return BaseScreen(
       title: "🌟 Số 0–10 🌟",
       child: Stack(
-        alignment: Alignment.center,
         children: [
           const AnimatedBackground(),
 
-          /// 👉 Nội dung chính có scroll
           SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.only(bottom: size.height * 0.25),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // 📖 Flashcard
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 500),
-                  transitionBuilder: (child, anim) => SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(1, 0),
-                      end: Offset.zero,
-                    ).animate(anim),
-                    child: child,
-                  ),
-                  child: Container(
-                    key: ValueKey(currentIndex),
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 16,
-                    ),
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                // ⭐ progress bar
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: size.height * 0.015),
+                  child: SizedBox(
+                    width: size.width * 0.7,
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: LinearProgressIndicator(
+                            value: numbers.isEmpty
+                                ? 0
+                                : (totalStars / numbers.length).clamp(0, 1),
+                            minHeight: size.height * 0.04,
+                            backgroundColor: Colors.grey[300],
+                            valueColor: AlwaysStoppedAnimation(
+                              Colors.amber,
+                            ),
+                          ),
+                        ),
                         Text(
-                          item["value"].toString(),
+                          "⭐ $totalStars / ${numbers.length}",
                           style: TextStyle(
-                            fontSize: 100,
+                            fontSize: size.width * 0.05,
                             fontWeight: FontWeight.bold,
-                            color: Colors.deepPurple,
-                            shadows: [
-                              Shadow(
-                                blurRadius: 20,
-                                color: Colors.deepPurpleAccent.withOpacity(0.6),
-                                offset: const Offset(0, 0),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        ScaleTransition(
-                          scale: _mascotScale,
-                          child: Image.asset(
-                            item["image"],
-                            width: 160,
-                            height: 160,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          item["text"],
-                          style: const TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.w500,
                             color: Colors.black87,
                           ),
                         ),
@@ -258,74 +239,144 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
                   ),
                 ),
 
-                const SizedBox(height: 30),
+                // Flashcard
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 500),
+                  transitionBuilder: (child, anim) => FadeTransition(
+                    opacity: anim,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.2),
+                        end: Offset.zero,
+                      ).animate(anim),
+                      child: child,
+                    ),
+                  ),
+                  child: SizedBox(
+                    key: ValueKey(currentIndex),
+                    width: cardWidth,
+                    height: size.height * 0.55,
+                    child: Container(
+                      padding: EdgeInsets.all(cardPadding),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(32),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 16,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            item["value"].toString(),
+                            style: TextStyle(
+                              fontSize: numberFont,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.deepPurple,
+                            ),
+                          ),
+                          SizedBox(height: size.height * 0.015),
+                          ScaleTransition(
+                            scale: _mascotScale,
+                            child: Image.asset(
+                              item["image"],
+                              width: imageSize,
+                              height: imageSize,
+                            ),
+                          ),
+                          SizedBox(height: size.height * 0.015),
+                          Text(
+                            item["text"],
+                            style: TextStyle(
+                              fontSize: textFont,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
 
-                // 🔊 Nghe đọc
+                SizedBox(height: size.height * 0.04),
+
+                // Nghe đọc
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orangeAccent,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 28,
-                      vertical: 14,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: size.width * 0.08,
+                      vertical: size.height * 0.018,
                     ),
                   ),
-                  icon: const Icon(Icons.volume_up, size: 28),
-                  label: const Text("Nghe đọc", style: TextStyle(fontSize: 22)),
+                  icon: Icon(Icons.volume_up, size: size.width * 0.07),
+                  label: Text("Nghe đọc",
+                      style: TextStyle(fontSize: size.width * 0.055)),
                   onPressed: () => _playAudio(item["audio"]),
                 ),
 
-                const SizedBox(height: 30),
+                SizedBox(height: size.height * 0.04),
 
-                // ⬅️➡️ Điều hướng
+                // Điều hướng
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _circleButton(Icons.arrow_back, _prev, Colors.pinkAccent),
-                    _circleButton(Icons.arrow_forward, _next, Colors.lightBlue),
+                    if (currentIndex > 0)
+                      _circleButton(
+                          Icons.arrow_back, _prev, Colors.pinkAccent, size),
+                    if (currentIndex < numbers.length - 1)
+                      _circleButton(
+                          Icons.arrow_forward, _next, Colors.lightBlue, size),
                   ],
-                ),
-
-                const SizedBox(height: 30),
-
-                // 🎉 Hoàn thành
-                ScaleTransition(
-                  scale: _buttonScale,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: currentIndex == numbers.length - 1
-                          ? Colors.green
-                          : Colors.grey,
-                      shape: const StadiumBorder(),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 40,
-                        vertical: 18,
-                      ),
-                    ),
-                    icon: const Icon(Icons.check_circle, size: 28),
-                    label: const Text(
-                      "Hoàn thành",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    onPressed: currentIndex == numbers.length - 1
-                        ? () {
-                            _buttonAnimController.forward(from: 0);
-                            _confettiController.play();
-                            _showRewardPopup();
-                          }
-                        : null,
-                  ),
                 ),
               ],
             ),
           ),
 
-          // 🎊 Confetti
+          // Nút Hoàn thành fixed
+          if (currentIndex == numbers.length - 1)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: EdgeInsets.only(bottom: size.height * 0.03),
+                child: ScaleTransition(
+                  scale: _buttonScale,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      shape: const StadiumBorder(),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: size.width * 0.1,
+                        vertical: size.height * 0.02,
+                      ),
+                    ),
+                    icon: Icon(Icons.check_circle, size: size.width * 0.07),
+                    label: Text(
+                      "Hoàn thành",
+                      style: TextStyle(
+                        fontSize: size.width * 0.06,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onPressed: () {
+                      _confettiController.play();
+                      _showRewardPopup();
+                    },
+                  ),
+                ),
+              ),
+            ),
+
+          // Confetti
           ConfettiWidget(
             confettiController: _confettiController,
             blastDirectionality: BlastDirectionality.explosive,
@@ -344,11 +395,12 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
     );
   }
 
-  Widget _circleButton(IconData icon, VoidCallback onTap, Color color) {
+  Widget _circleButton(
+      IconData icon, VoidCallback onTap, Color color, Size size) {
     return Ink(
       decoration: ShapeDecoration(shape: const CircleBorder(), color: color),
       child: IconButton(
-        icon: Icon(icon, size: 36, color: Colors.white),
+        icon: Icon(icon, size: size.width * 0.1, color: Colors.white),
         onPressed: onTap,
       ),
     );
@@ -407,14 +459,10 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
           builder: (_, __) {
             return Positioned(
               top: 80,
-              left:
-                  MediaQuery.of(context).size.width *
+              left: MediaQuery.of(context).size.width *
                   (_cloudController.value * 2 - 1),
-              child: Icon(
-                Icons.cloud,
-                size: 120,
-                color: Colors.white.withOpacity(0.8),
-              ),
+              child: Icon(Icons.cloud,
+                  size: 120, color: Colors.white.withOpacity(0.8)),
             );
           },
         ),
@@ -422,22 +470,20 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
           animation: _balloonController,
           builder: (_, __) {
             return Positioned(
-              bottom:
-                  MediaQuery.of(context).size.height *
+              bottom: MediaQuery.of(context).size.height *
                   (1 - _balloonController.value),
               left: MediaQuery.of(context).size.width * 0.7,
-              child: Icon(
-                Icons.celebration,
-                size: 60,
-                color: Colors.pink.withOpacity(0.8),
-              ),
+              child: Icon(Icons.celebration,
+                  size: 60, color: Colors.pink.withOpacity(0.8)),
             );
           },
         ),
         ...List.generate(6, (i) {
-          final left = _random.nextDouble() * MediaQuery.of(context).size.width;
-          final top =
-              _random.nextDouble() * MediaQuery.of(context).size.height * 0.5;
+          final left = _random.nextDouble() *
+              MediaQuery.of(context).size.width;
+          final top = _random.nextDouble() *
+              MediaQuery.of(context).size.height *
+              0.5;
           return AnimatedBuilder(
             animation: _starController,
             builder: (_, __) {
@@ -446,11 +492,8 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
                 top: top,
                 child: Opacity(
                   opacity: _starController.value,
-                  child: Icon(
-                    Icons.star,
-                    size: 18,
-                    color: Colors.yellow.withOpacity(0.8),
-                  ),
+                  child: Icon(Icons.star,
+                      size: 18, color: Colors.yellow.withOpacity(0.8)),
                 ),
               );
             },
