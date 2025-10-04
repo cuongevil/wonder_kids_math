@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:wonder_kids_math/screens/badge_collection_screen.dart';
 import 'package:wonder_kids_math/screens/leaderboard_screen.dart';
+import 'package:wonder_kids_math/screens/learn_numbers_100.dart';
+import 'package:wonder_kids_math/screens/learn_numbers_50.dart';
 import 'package:wonder_kids_math/screens/profile_screen.dart';
 
 import 'screens/game_addition10.dart';
@@ -35,6 +37,8 @@ class WonderKidsMathApp extends StatelessWidget {
         '/badges': (_) => const BadgeCollectionScreen(),
         '/learn_numbers': (_) => const LearnNumbersScreen(),
         '/learn_numbers_20': (_) => const LearnNumbers20Screen(),
+        '/learn_numbers_50': (_) => const LearnNumbers50Screen(),
+        '/learn_numbers_100': (_) => const LearnNumbers100Screen(),
         '/game_addition10': (_) => const GameAddition10Screen(),
         '/game_subtraction10': (_) => const GameSubtraction10Screen(),
         '/game_compare': (_) => const GameCompareScreen(),
