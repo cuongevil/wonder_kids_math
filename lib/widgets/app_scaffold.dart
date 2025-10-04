@@ -164,6 +164,22 @@ class _AppScaffoldState extends State<AppScaffold> {
       ),
       Level(
         index: 3,
+        title: 'Số 21–50',
+        type: LevelType.topic,
+        state: LevelState.locked,
+        route: '/learn_numbers_50',
+        levelKey: "21_50",
+      ),
+      Level(
+        index: 4,
+        title: 'Số 51–100',
+        type: LevelType.topic,
+        state: LevelState.locked,
+        route: '/learn_numbers_100',
+        levelKey: "51_100",
+      ),
+      Level(
+        index: 5,
         title: 'Cộng ≤10',
         type: LevelType.topic,
         state: LevelState.locked,
@@ -171,7 +187,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         levelKey: "addition10",
       ),
       Level(
-        index: 4,
+        index: 6,
         title: 'Trừ ≤10',
         type: LevelType.topic,
         state: LevelState.locked,
@@ -179,7 +195,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         levelKey: "subtraction10",
       ),
       Level(
-        index: 5,
+        index: 7,
         title: 'So Sánh',
         type: LevelType.topic,
         state: LevelState.locked,
@@ -187,7 +203,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         levelKey: "compare",
       ),
       Level(
-        index: 6,
+        index: 8,
         title: 'Cộng ≤20',
         type: LevelType.topic,
         state: LevelState.locked,
@@ -195,7 +211,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         levelKey: "addition20",
       ),
       Level(
-        index: 7,
+        index: 9,
         title: 'Trừ ≤20',
         type: LevelType.topic,
         state: LevelState.locked,
@@ -203,7 +219,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         levelKey: "subtraction20",
       ),
       Level(
-        index: 8,
+        index: 10,
         title: 'Hình Học',
         type: LevelType.topic,
         state: LevelState.locked,
@@ -211,7 +227,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         levelKey: "shapes",
       ),
       Level(
-        index: 9,
+        index: 11,
         title: 'Đo Lường',
         type: LevelType.topic,
         state: LevelState.locked,
@@ -219,7 +235,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         levelKey: "measure",
       ),
       Level(
-        index: 10,
+        index: 12,
         title: 'Tổng hợp',
         type: LevelType.boss,
         state: LevelState.locked,
@@ -227,7 +243,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         levelKey: "final_boss",
       ),
       Level(
-        index: 11,
+        index: 13,
         title: 'Kết thúc',
         type: LevelType.end,
         state: LevelState.locked,
@@ -289,23 +305,23 @@ class _AppScaffoldState extends State<AppScaffold> {
                   _buildKidIconButton(
                     context: context,
                     color: Colors.pinkAccent,
-                    icon: Icons.refresh,
-                    tooltip: "Reset Levels",
-                    onTap: _resetLevels,
+                    icon: Icons.person,
+                    tooltip: "Thành tích",
+                    onTap: () => Navigator.pushNamed(context, "/profile"),
+                  ),
+                  _buildKidIconButton(
+                    context: context,
+                    color: Colors.orangeAccent,
+                    icon: Icons.leaderboard,
+                    tooltip: "Bảng xếp hạng",
+                    onTap: () => Navigator.pushNamed(context, "/leaderboard"),
                   ),
                   _buildKidIconButton(
                     context: context,
                     color: Colors.lightBlueAccent,
-                    icon: Icons.delete,
-                    tooltip: "Clear Cache",
-                    onTap: _clearCache,
-                  ),
-                  _buildKidIconButton(
-                    context: context,
-                    color: Colors.greenAccent,
-                    icon: Icons.lock_open,
-                    tooltip: "Unlock All",
-                    onTap: _unlockAll,
+                    icon: Icons.collections,
+                    tooltip: "Bộ sưu tập huy hiệu",
+                    onTap: () => Navigator.pushNamed(context, "/badges"),
                   ),
                   if (kDebugMode)
                     _buildKidIconButton(

@@ -1,0 +1,16 @@
+{
+  "numbers": [
+    {
+      "value": 21,
+      "text": "hai mươi mốt",
+      "image": "assets/images/numbers/21.png",
+      "audio": "audios/numbers/21.mp3"
+    },
+    {
+      "value": 22,
+      "text": "hai mươi hai",
+      "image": "assets/images/numbers/22.png",
+      "audio": "audios/numbers/22.mp3"
+    }
+  ]
+}
