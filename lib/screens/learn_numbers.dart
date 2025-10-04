@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'base_screen.dart';
+import '../widgets/wow_card.dart';
 
 class LearnNumbersScreen extends StatefulWidget {
   const LearnNumbersScreen({super.key});
@@ -22,13 +23,9 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
   int currentIndex = 0;
   int totalStars = 0;
 
-  /// lưu index các số đã học để tránh cộng sao 2 lần
   Set<int> learnedIndexes = {};
-
   final AudioPlayer _player = AudioPlayer();
 
-  late AnimationController _mascotController;
-  late Animation<double> _mascotScale;
   late ConfettiController _confettiController;
   late AnimationController _buttonAnimController;
   late Animation<double> _buttonScale;
@@ -45,15 +42,6 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
     super.initState();
     _loadNumbers();
     _loadProgress();
-
-    _mascotController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-
-    _mascotScale = Tween<double>(begin: 0.95, end: 1.05).animate(
-      CurvedAnimation(parent: _mascotController, curve: Curves.easeInOut),
-    );
 
     _confettiController = ConfettiController(
       duration: const Duration(seconds: 3),
@@ -99,7 +87,6 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
         "learnedIndexes", jsonEncode(learnedIndexes.toList()));
   }
 
-  /// đánh dấu 1 số là đã học
   void _markLearned(int index) {
     if (!learnedIndexes.contains(index)) {
       setState(() {
@@ -116,6 +103,11 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
         currentIndex++;
       });
       _markLearned(currentIndex);
+
+      // 🔹 Trigger animation khi đổi card
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        WowCard.triggerAnimation(context);
+      });
     }
   }
 
@@ -125,6 +117,11 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
         currentIndex--;
       });
       _markLearned(currentIndex);
+
+      // 🔹 Trigger animation khi đổi card
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        WowCard.triggerAnimation(context);
+      });
     }
   }
 
@@ -183,16 +180,10 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // đánh dấu số hiện tại là đã học
     _markLearned(currentIndex);
 
     final item = numbers[currentIndex];
     final size = MediaQuery.of(context).size;
-    final cardWidth = size.width * 0.85;
-    final cardPadding = size.width * 0.06;
-    final imageSize = size.width * 0.45;
-    final numberFont = size.width * 0.16;
-    final textFont = size.width * 0.075;
 
     return BaseScreen(
       title: "🌟 Số 0–10 🌟",
@@ -216,12 +207,10 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
                         ClipRRect(
                           borderRadius: BorderRadius.circular(20),
                           child: LinearProgressIndicator(
-                            value: numbers.isEmpty
-                                ? 0
-                                : (totalStars / numbers.length).clamp(0, 1),
+                            value: (totalStars / numbers.length).clamp(0, 1),
                             minHeight: size.height * 0.04,
                             backgroundColor: Colors.grey[300],
-                            valueColor: AlwaysStoppedAnimation(
+                            valueColor: const AlwaysStoppedAnimation(
                               Colors.amber,
                             ),
                           ),
@@ -239,74 +228,14 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
                   ),
                 ),
 
-                // Flashcard
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 500),
-                  transitionBuilder: (child, anim) => FadeTransition(
-                    opacity: anim,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 0.2),
-                        end: Offset.zero,
-                      ).animate(anim),
-                      child: child,
-                    ),
-                  ),
-                  child: SizedBox(
-                    key: ValueKey(currentIndex),
-                    width: cardWidth,
-                    height: size.height * 0.55,
-                    child: Container(
-                      padding: EdgeInsets.all(cardPadding),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(32),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 16,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            item["value"].toString(),
-                            style: TextStyle(
-                              fontSize: numberFont,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.deepPurple,
-                            ),
-                          ),
-                          SizedBox(height: size.height * 0.015),
-                          ScaleTransition(
-                            scale: _mascotScale,
-                            child: Image.asset(
-                              item["image"],
-                              width: imageSize,
-                              height: imageSize,
-                            ),
-                          ),
-                          SizedBox(height: size.height * 0.015),
-                          Text(
-                            item["text"],
-                            style: TextStyle(
-                              fontSize: textFont,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                // 📌 dùng WowCard
+                WowCard(
+                  imagePath: item["image"],
+                  text: item["text"],
                 ),
 
                 SizedBox(height: size.height * 0.04),
 
-                // Nghe đọc
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orangeAccent,
@@ -319,14 +248,13 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
                     ),
                   ),
                   icon: Icon(Icons.volume_up, size: size.width * 0.07),
-                  label: Text("Nghe đọc",
+                  label: Text("Nghe",
                       style: TextStyle(fontSize: size.width * 0.055)),
                   onPressed: () => _playAudio(item["audio"]),
                 ),
 
                 SizedBox(height: size.height * 0.04),
 
-                // Điều hướng
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -334,15 +262,14 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
                       _circleButton(
                           Icons.arrow_back, _prev, Colors.pinkAccent, size),
                     if (currentIndex < numbers.length - 1)
-                      _circleButton(
-                          Icons.arrow_forward, _next, Colors.lightBlue, size),
+                      _circleButton(Icons.arrow_forward, _next,
+                          Colors.lightBlue, size),
                   ],
                 ),
               ],
             ),
           ),
 
-          // Nút Hoàn thành fixed
           if (currentIndex == numbers.length - 1)
             Align(
               alignment: Alignment.bottomCenter,
@@ -376,7 +303,6 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
               ),
             ),
 
-          // Confetti
           ConfettiWidget(
             confettiController: _confettiController,
             blastDirectionality: BlastDirectionality.explosive,
@@ -408,7 +334,6 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
 
   @override
   void dispose() {
-    _mascotController.dispose();
     _confettiController.dispose();
     _buttonAnimController.dispose();
     super.dispose();
@@ -479,8 +404,8 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
           },
         ),
         ...List.generate(6, (i) {
-          final left = _random.nextDouble() *
-              MediaQuery.of(context).size.width;
+          final left =
+              _random.nextDouble() * MediaQuery.of(context).size.width;
           final top = _random.nextDouble() *
               MediaQuery.of(context).size.height *
               0.5;
