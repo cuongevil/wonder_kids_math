@@ -1,6 +1,312 @@
 {
   "numbers": [
     {
+      "value": 0,
+      "text": "không",
+      "image": "assets/images/numbers/0.png",
+      "audio": "audios/numbers/0.mp3"
+    },
+    {
+      "value": 1,
+      "text": "một",
+      "image": "assets/images/numbers/1.png",
+      "audio": "audios/numbers/1.mp3"
+    },
+    {
+      "value": 2,
+      "text": "hai",
+      "image": "assets/images/numbers/2.png",
+      "audio": "audios/numbers/2.mp3"
+    },
+    {
+      "value": 3,
+      "text": "ba",
+      "image": "assets/images/numbers/3.png",
+      "audio": "audios/numbers/3.mp3"
+    },
+    {
+      "value": 4,
+      "text": "bốn",
+      "image": "assets/images/numbers/4.png",
+      "audio": "audios/numbers/4.mp3"
+    },
+    {
+      "value": 5,
+      "text": "năm",
+      "image": "assets/images/numbers/5.png",
+      "audio": "audios/numbers/5.mp3"
+    },
+    {
+      "value": 6,
+      "text": "sáu",
+      "image": "assets/images/numbers/6.png",
+      "audio": "audios/numbers/6.mp3"
+    },
+    {
+      "value": 7,
+      "text": "bảy",
+      "image": "assets/images/numbers/7.png",
+      "audio": "audios/numbers/7.mp3"
+    },
+    {
+      "value": 8,
+      "text": "tám",
+      "image": "assets/images/numbers/8.png",
+      "audio": "audios/numbers/8.mp3"
+    },
+    {
+      "value": 9,
+      "text": "chín",
+      "image": "assets/images/numbers/9.png",
+      "audio": "audios/numbers/9.mp3"
+    },
+    {
+      "value": 10,
+      "text": "mười",
+      "image": "assets/images/numbers/10.png",
+      "audio": "audios/numbers/10.mp3"
+    },
+    {
+      "value": 11,
+      "text": "mười một",
+      "image": "assets/images/numbers/11.png",
+      "audio": "audios/numbers/11.mp3"
+    },
+    {
+      "value": 12,
+      "text": "mười hai",
+      "image": "assets/images/numbers/12.png",
+      "audio": "audios/numbers/12.mp3"
+    },
+    {
+      "value": 13,
+      "text": "mười ba",
+      "image": "assets/images/numbers/13.png",
+      "audio": "audios/numbers/13.mp3"
+    },
+    {
+      "value": 14,
+      "text": "mười bốn",
+      "image": "assets/images/numbers/14.png",
+      "audio": "audios/numbers/14.mp3"
+    },
+    {
+      "value": 15,
+      "text": "mười lăm",
+      "image": "assets/images/numbers/15.png",
+      "audio": "audios/numbers/15.mp3"
+    },
+    {
+      "value": 16,
+      "text": "mười sáu",
+      "image": "assets/images/numbers/16.png",
+      "audio": "audios/numbers/16.mp3"
+    },
+    {
+      "value": 17,
+      "text": "mười bảy",
+      "image": "assets/images/numbers/17.png",
+      "audio": "audios/numbers/17.mp3"
+    },
+    {
+      "value": 18,
+      "text": "mười tám",
+      "image": "assets/images/numbers/18.png",
+      "audio": "audios/numbers/18.mp3"
+    },
+    {
+      "value": 19,
+      "text": "mười chín",
+      "image": "assets/images/numbers/19.png",
+      "audio": "audios/numbers/19.mp3"
+    },
+    {
+      "value": 20,
+      "text": "hai mươi",
+      "image": "assets/images/numbers/20.png",
+      "audio": "audios/numbers/20.mp3"
+    },
+    {
+      "value": 21,
+      "text": "hai mươi mốt",
+      "image": "assets/images/numbers/21.png",
+      "audio": "audios/numbers/21.mp3"
+    },
+    {
+      "value": 22,
+      "text": "hai mươi hai",
+      "image": "assets/images/numbers/22.png",
+      "audio": "audios/numbers/22.mp3"
+    },
+    {
+      "value": 23,
+      "text": "hai mươi ba",
+      "image": "assets/images/numbers/23.png",
+      "audio": "audios/numbers/23.mp3"
+    },
+    {
+      "value": 24,
+      "text": "hai mươi bốn",
+      "image": "assets/images/numbers/24.png",
+      "audio": "audios/numbers/24.mp3"
+    },
+    {
+      "value": 25,
+      "text": "hai mươi lăm",
+      "image": "assets/images/numbers/25.png",
+      "audio": "audios/numbers/25.mp3"
+    },
+    {
+      "value": 26,
+      "text": "hai mươi sáu",
+      "image": "assets/images/numbers/26.png",
+      "audio": "audios/numbers/26.mp3"
+    },
+    {
+      "value": 27,
+      "text": "hai mươi bảy",
+      "image": "assets/images/numbers/27.png",
+      "audio": "audios/numbers/27.mp3"
+    },
+    {
+      "value": 28,
+      "text": "hai mươi tám",
+      "image": "assets/images/numbers/28.png",
+      "audio": "audios/numbers/28.mp3"
+    },
+    {
+      "value": 29,
+      "text": "hai mươi chín",
+      "image": "assets/images/numbers/29.png",
+      "audio": "audios/numbers/29.mp3"
+    },
+    {
+      "value": 30,
+      "text": "ba mươi",
+      "image": "assets/images/numbers/30.png",
+      "audio": "audios/numbers/30.mp3"
+    },
+    {
+      "value": 31,
+      "text": "ba mươi mốt",
+      "image": "assets/images/numbers/31.png",
+      "audio": "audios/numbers/31.mp3"
+    },
+    {
+      "value": 32,
+      "text": "ba mươi hai",
+      "image": "assets/images/numbers/32.png",
+      "audio": "audios/numbers/32.mp3"
+    },
+    {
+      "value": 33,
+      "text": "ba mươi ba",
+      "image": "assets/images/numbers/33.png",
+      "audio": "audios/numbers/33.mp3"
+    },
+    {
+      "value": 34,
+      "text": "ba mươi bốn",
+      "image": "assets/images/numbers/34.png",
+      "audio": "audios/numbers/34.mp3"
+    },
+    {
+      "value": 35,
+      "text": "ba mươi lăm",
+      "image": "assets/images/numbers/35.png",
+      "audio": "audios/numbers/35.mp3"
+    },
+    {
+      "value": 36,
+      "text": "ba mươi sáu",
+      "image": "assets/images/numbers/36.png",
+      "audio": "audios/numbers/36.mp3"
+    },
+    {
+      "value": 37,
+      "text": "ba mươi bảy",
+      "image": "assets/images/numbers/37.png",
+      "audio": "audios/numbers/37.mp3"
+    },
+    {
+      "value": 38,
+      "text": "ba mươi tám",
+      "image": "assets/images/numbers/38.png",
+      "audio": "audios/numbers/38.mp3"
+    },
+    {
+      "value": 39,
+      "text": "ba mươi chín",
+      "image": "assets/images/numbers/39.png",
+      "audio": "audios/numbers/39.mp3"
+    },
+    {
+      "value": 40,
+      "text": "bốn mươi",
+      "image": "assets/images/numbers/40.png",
+      "audio": "audios/numbers/40.mp3"
+    },
+    {
+      "value": 41,
+      "text": "bốn mươi mốt",
+      "image": "assets/images/numbers/41.png",
+      "audio": "audios/numbers/41.mp3"
+    },
+    {
+      "value": 42,
+      "text": "bốn mươi hai",
+      "image": "assets/images/numbers/42.png",
+      "audio": "audios/numbers/42.mp3"
+    },
+    {
+      "value": 43,
+      "text": "bốn mươi ba",
+      "image": "assets/images/numbers/43.png",
+      "audio": "audios/numbers/43.mp3"
+    },
+    {
+      "value": 44,
+      "text": "bốn mươi bốn",
+      "image": "assets/images/numbers/44.png",
+      "audio": "audios/numbers/44.mp3"
+    },
+    {
+      "value": 45,
+      "text": "bốn mươi lăm",
+      "image": "assets/images/numbers/45.png",
+      "audio": "audios/numbers/45.mp3"
+    },
+    {
+      "value": 46,
+      "text": "bốn mươi sáu",
+      "image": "assets/images/numbers/46.png",
+      "audio": "audios/numbers/46.mp3"
+    },
+    {
+      "value": 47,
+      "text": "bốn mươi bảy",
+      "image": "assets/images/numbers/47.png",
+      "audio": "audios/numbers/47.mp3"
+    },
+    {
+      "value": 48,
+      "text": "bốn mươi tám",
+      "image": "assets/images/numbers/48.png",
+      "audio": "audios/numbers/48.mp3"
+    },
+    {
+      "value": 49,
+      "text": "bốn mươi chín",
+      "image": "assets/images/numbers/49.png",
+      "audio": "audios/numbers/49.mp3"
+    },
+    {
+      "value": 50,
+      "text": "năm mươi",
+      "image": "assets/images/numbers/50.png",
+      "audio": "audios/numbers/50.mp3"
+    },
+    {
       "value": 51,
       "text": "năm mươi mốt",
       "image": "assets/images/numbers/51.png",
@@ -11,6 +317,294 @@
       "text": "năm mươi hai",
       "image": "assets/images/numbers/52.png",
       "audio": "audios/numbers/52.mp3"
+    },
+    {
+      "value": 53,
+      "text": "năm mươi ba",
+      "image": "assets/images/numbers/53.png",
+      "audio": "audios/numbers/53.mp3"
+    },
+    {
+      "value": 54,
+      "text": "năm mươi bốn",
+      "image": "assets/images/numbers/54.png",
+      "audio": "audios/numbers/54.mp3"
+    },
+    {
+      "value": 55,
+      "text": "năm mươi lăm",
+      "image": "assets/images/numbers/55.png",
+      "audio": "audios/numbers/55.mp3"
+    },
+    {
+      "value": 56,
+      "text": "năm mươi sáu",
+      "image": "assets/images/numbers/56.png",
+      "audio": "audios/numbers/56.mp3"
+    },
+    {
+      "value": 57,
+      "text": "năm mươi bảy",
+      "image": "assets/images/numbers/57.png",
+      "audio": "audios/numbers/57.mp3"
+    },
+    {
+      "value": 58,
+      "text": "năm mươi tám",
+      "image": "assets/images/numbers/58.png",
+      "audio": "audios/numbers/58.mp3"
+    },
+    {
+      "value": 59,
+      "text": "năm mươi chín",
+      "image": "assets/images/numbers/59.png",
+      "audio": "audios/numbers/59.mp3"
+    },
+    {
+      "value": 60,
+      "text": "sáu mươi",
+      "image": "assets/images/numbers/60.png",
+      "audio": "audios/numbers/60.mp3"
+    },
+    {
+      "value": 61,
+      "text": "sáu mươi mốt",
+      "image": "assets/images/numbers/61.png",
+      "audio": "audios/numbers/61.mp3"
+    },
+    {
+      "value": 62,
+      "text": "sáu mươi hai",
+      "image": "assets/images/numbers/62.png",
+      "audio": "audios/numbers/62.mp3"
+    },
+    {
+      "value": 63,
+      "text": "sáu mươi ba",
+      "image": "assets/images/numbers/63.png",
+      "audio": "audios/numbers/63.mp3"
+    },
+    {
+      "value": 64,
+      "text": "sáu mươi bốn",
+      "image": "assets/images/numbers/64.png",
+      "audio": "audios/numbers/64.mp3"
+    },
+    {
+      "value": 65,
+      "text": "sáu mươi lăm",
+      "image": "assets/images/numbers/65.png",
+      "audio": "audios/numbers/65.mp3"
+    },
+    {
+      "value": 66,
+      "text": "sáu mươi sáu",
+      "image": "assets/images/numbers/66.png",
+      "audio": "audios/numbers/66.mp3"
+    },
+    {
+      "value": 67,
+      "text": "sáu mươi bảy",
+      "image": "assets/images/numbers/67.png",
+      "audio": "audios/numbers/67.mp3"
+    },
+    {
+      "value": 68,
+      "text": "sáu mươi tám",
+      "image": "assets/images/numbers/68.png",
+      "audio": "audios/numbers/68.mp3"
+    },
+    {
+      "value": 69,
+      "text": "sáu mươi chín",
+      "image": "assets/images/numbers/69.png",
+      "audio": "audios/numbers/69.mp3"
+    },
+    {
+      "value": 70,
+      "text": "bảy mươi",
+      "image": "assets/images/numbers/70.png",
+      "audio": "audios/numbers/70.mp3"
+    },
+    {
+      "value": 71,
+      "text": "bảy mươi mốt",
+      "image": "assets/images/numbers/71.png",
+      "audio": "audios/numbers/71.mp3"
+    },
+    {
+      "value": 72,
+      "text": "bảy mươi hai",
+      "image": "assets/images/numbers/72.png",
+      "audio": "audios/numbers/72.mp3"
+    },
+    {
+      "value": 73,
+      "text": "bảy mươi ba",
+      "image": "assets/images/numbers/73.png",
+      "audio": "audios/numbers/73.mp3"
+    },
+    {
+      "value": 74,
+      "text": "bảy mươi bốn",
+      "image": "assets/images/numbers/74.png",
+      "audio": "audios/numbers/74.mp3"
+    },
+    {
+      "value": 75,
+      "text": "bảy mươi lăm",
+      "image": "assets/images/numbers/75.png",
+      "audio": "audios/numbers/75.mp3"
+    },
+    {
+      "value": 76,
+      "text": "bảy mươi sáu",
+      "image": "assets/images/numbers/76.png",
+      "audio": "audios/numbers/76.mp3"
+    },
+    {
+      "value": 77,
+      "text": "bảy mươi bảy",
+      "image": "assets/images/numbers/77.png",
+      "audio": "audios/numbers/77.mp3"
+    },
+    {
+      "value": 78,
+      "text": "bảy mươi tám",
+      "image": "assets/images/numbers/78.png",
+      "audio": "audios/numbers/78.mp3"
+    },
+    {
+      "value": 79,
+      "text": "bảy mươi chín",
+      "image": "assets/images/numbers/79.png",
+      "audio": "audios/numbers/79.mp3"
+    },
+    {
+      "value": 80,
+      "text": "tám mươi",
+      "image": "assets/images/numbers/80.png",
+      "audio": "audios/numbers/80.mp3"
+    },
+    {
+      "value": 81,
+      "text": "tám mươi mốt",
+      "image": "assets/images/numbers/81.png",
+      "audio": "audios/numbers/81.mp3"
+    },
+    {
+      "value": 82,
+      "text": "tám mươi hai",
+      "image": "assets/images/numbers/82.png",
+      "audio": "audios/numbers/82.mp3"
+    },
+    {
+      "value": 83,
+      "text": "tám mươi ba",
+      "image": "assets/images/numbers/83.png",
+      "audio": "audios/numbers/83.mp3"
+    },
+    {
+      "value": 84,
+      "text": "tám mươi bốn",
+      "image": "assets/images/numbers/84.png",
+      "audio": "audios/numbers/84.mp3"
+    },
+    {
+      "value": 85,
+      "text": "tám mươi lăm",
+      "image": "assets/images/numbers/85.png",
+      "audio": "audios/numbers/85.mp3"
+    },
+    {
+      "value": 86,
+      "text": "tám mươi sáu",
+      "image": "assets/images/numbers/86.png",
+      "audio": "audios/numbers/86.mp3"
+    },
+    {
+      "value": 87,
+      "text": "tám mươi bảy",
+      "image": "assets/images/numbers/87.png",
+      "audio": "audios/numbers/87.mp3"
+    },
+    {
+      "value": 88,
+      "text": "tám mươi tám",
+      "image": "assets/images/numbers/88.png",
+      "audio": "audios/numbers/88.mp3"
+    },
+    {
+      "value": 89,
+      "text": "tám mươi chín",
+      "image": "assets/images/numbers/89.png",
+      "audio": "audios/numbers/89.mp3"
+    },
+    {
+      "value": 90,
+      "text": "chín mươi",
+      "image": "assets/images/numbers/90.png",
+      "audio": "audios/numbers/90.mp3"
+    },
+    {
+      "value": 91,
+      "text": "chín mươi mốt",
+      "image": "assets/images/numbers/91.png",
+      "audio": "audios/numbers/91.mp3"
+    },
+    {
+      "value": 92,
+      "text": "chín mươi hai",
+      "image": "assets/images/numbers/92.png",
+      "audio": "audios/numbers/92.mp3"
+    },
+    {
+      "value": 93,
+      "text": "chín mươi ba",
+      "image": "assets/images/numbers/93.png",
+      "audio": "audios/numbers/93.mp3"
+    },
+    {
+      "value": 94,
+      "text": "chín mươi bốn",
+      "image": "assets/images/numbers/94.png",
+      "audio": "audios/numbers/94.mp3"
+    },
+    {
+      "value": 95,
+      "text": "chín mươi lăm",
+      "image": "assets/images/numbers/95.png",
+      "audio": "audios/numbers/95.mp3"
+    },
+    {
+      "value": 96,
+      "text": "chín mươi sáu",
+      "image": "assets/images/numbers/96.png",
+      "audio": "audios/numbers/96.mp3"
+    },
+    {
+      "value": 97,
+      "text": "chín mươi bảy",
+      "image": "assets/images/numbers/97.png",
+      "audio": "audios/numbers/97.mp3"
+    },
+    {
+      "value": 98,
+      "text": "chín mươi tám",
+      "image": "assets/images/numbers/98.png",
+      "audio": "audios/numbers/98.mp3"
+    },
+    {
+      "value": 99,
+      "text": "chín mươi chín",
+      "image": "assets/images/numbers/99.png",
+      "audio": "audios/numbers/99.mp3"
+    },
+    {
+      "value": 100,
+      "text": "một trăm",
+      "image": "assets/images/numbers/100.png",
+      "audio": "audios/numbers/100.mp3"
     }
   ]
 }

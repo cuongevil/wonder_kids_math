@@ -1,12 +1,13 @@
 import 'dart:math';
+
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 
 import '../models/level.dart';
 import '../services/progress_service.dart';
+import '../widgets/app_scaffold.dart';
 import '../widgets/level_node.dart';
 import '../widgets/map_background.dart';
-import '../widgets/app_scaffold.dart';
 import 'level_detail.dart';
 
 class MapScreen extends StatefulWidget {
@@ -28,8 +29,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    _confettiController =
-        ConfettiController(duration: const Duration(seconds: 2));
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 2),
+    );
 
     _bounceController = AnimationController(
       vsync: this,
@@ -78,8 +80,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     }
 
     // 🔹 tìm index playable đầu tiên
-    final firstPlayableIndex =
-    levels.indexWhere((e) => e.state == LevelState.playable);
+    final firstPlayableIndex = levels.indexWhere(
+      (e) => e.state == LevelState.playable,
+    );
 
     if (mounted) {
       setState(() {});
@@ -90,7 +93,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           final topPadding =
               kToolbarHeight + MediaQuery.of(context).padding.top + 16;
 
-          final targetOffset = firstPlayableIndex * spacing -
+          final targetOffset =
+              firstPlayableIndex * spacing -
               screenH / 2 +
               spacing / 2 +
               topPadding;
@@ -108,8 +112,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     switch (key) {
       case "0_10":
         return 11;
-      case "11_20":
-        return 10;
+      case "0_20":
+        return 21;
+      case "0_50":
+        return 51;
+      case "0_100":
+        return 101;
       case "addition10":
         return 10;
       case "subtraction10":
@@ -150,27 +158,27 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       ),
       Level(
         index: 2,
-        title: 'Số 11–20',
+        title: 'Số 0–20',
         type: LevelType.topic,
         state: LevelState.locked,
         route: '/learn_numbers_20',
-        levelKey: "11_20",
+        levelKey: "0_20",
       ),
       Level(
         index: 3,
-        title: 'Số 21–50',
+        title: 'Số 0–50',
         type: LevelType.topic,
         state: LevelState.locked,
         route: '/learn_numbers_50',
-        levelKey: "21_50",
+        levelKey: "0_50",
       ),
       Level(
         index: 4,
-        title: 'Số 51–100',
+        title: 'Số 0–100',
         type: LevelType.topic,
         state: LevelState.locked,
         route: '/learn_numbers_100',
-        levelKey: "51_100",
+        levelKey: "0_100",
       ),
       Level(
         index: 5,
@@ -333,17 +341,20 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                             : screenH / 2;
                         final distance = (levelTop - centerY).abs();
 
-                        final scale =
-                        (1.1 - (distance / screenH)).clamp(0.8, 1.1);
-                        final opacity =
-                        (1.2 - (distance / (screenH * 0.7))).clamp(0.4, 1.0);
+                        final scale = (1.1 - (distance / screenH)).clamp(
+                          0.8,
+                          1.1,
+                        );
+                        final opacity = (1.2 - (distance / (screenH * 0.7)))
+                            .clamp(0.4, 1.0);
                         final isCenter = distance < 50;
 
                         Widget node = LevelNode(
                           level: levels[i],
                           onTap: () => _openLevel(levels[i]),
                           isCenter: isCenter,
-                          isNight: DateTime.now().hour >= 18 ||
+                          isNight:
+                              DateTime.now().hour >= 18 ||
                               DateTime.now().hour < 6,
                         );
 
@@ -354,11 +365,14 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                           );
                         }
 
-                        double rawLeft = (screenW - nodeSize) / 2 +
+                        double rawLeft =
+                            (screenW - nodeSize) / 2 +
                             sin(i * 0.8) * safeAmplitude +
                             bias;
-                        double left = rawLeft
-                            .clamp(minMargin, screenW - nodeSize - minMargin);
+                        double left = rawLeft.clamp(
+                          minMargin,
+                          screenW - nodeSize - minMargin,
+                        );
 
                         return Positioned(
                           top: levelTop,
@@ -379,7 +393,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             child: ConfettiWidget(
               confettiController: _confettiController,
               blastDirectionality: BlastDirectionality.explosive,
-              colors: const [Colors.pink, Colors.blue, Colors.yellow, Colors.green],
+              colors: const [
+                Colors.pink,
+                Colors.blue,
+                Colors.yellow,
+                Colors.green,
+              ],
             ),
           ),
         ],

@@ -7,6 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/level.dart';
+import '../services/progress_service.dart';
+import '../widgets/wow_card.dart';
 import 'base_screen.dart';
 
 class LearnNumbers20Screen extends StatefulWidget {
@@ -18,17 +21,16 @@ class LearnNumbers20Screen extends StatefulWidget {
 
 class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
     with TickerProviderStateMixin {
+  final String levelKey = "11_20"; // 🔹 định danh level này
   List<dynamic> numbers = [];
   int currentIndex = 0;
   int totalStars = 0;
-  int totalDiamonds = 0;
-  final AudioPlayer _player = AudioPlayer();
+  Set<int> learnedIndexes = {};
+  bool isFinalRewardShown = false;
 
-  late AnimationController _mascotController;
-  late Animation<double> _mascotScale;
-  late ConfettiController _confettiController;
-  late AnimationController _buttonAnimController;
-  late Animation<double> _buttonScale;
+  final AudioPlayer _player = AudioPlayer();
+  late ConfettiController _confettiController; // 🎉 confetti lớn
+  late ConfettiController _miniConfettiController; // 🎊 confetti nhỏ
 
   final List<IconData> rewardIcons = [
     Icons.star,
@@ -42,25 +44,11 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
     super.initState();
     _loadNumbers();
     _loadProgress();
-
-    _mascotController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-    _mascotScale = Tween<double>(begin: 0.95, end: 1.05).animate(
-      CurvedAnimation(parent: _mascotController, curve: Curves.easeInOut),
-    );
-
     _confettiController = ConfettiController(
       duration: const Duration(seconds: 3),
     );
-
-    _buttonAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _buttonScale = Tween<double>(begin: 1.0, end: 1.2).animate(
-      CurvedAnimation(parent: _buttonAnimController, curve: Curves.elasticOut),
+    _miniConfettiController = ConfettiController(
+      duration: const Duration(seconds: 1),
     );
   }
 
@@ -69,55 +57,167 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
       'assets/configs/numbers_20.json',
     );
     final data = await json.decode(response);
+
     setState(() {
       numbers = data["numbers"];
     });
   }
 
   Future<void> _loadProgress() async {
+    totalStars = await ProgressService.getStars(levelKey);
+    learnedIndexes = await ProgressService.getLearnedIndexes(levelKey);
+
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      totalStars = prefs.getInt("totalStars") ?? 0;
-      totalDiamonds = prefs.getInt("totalDiamonds") ?? 0;
-    });
+    isFinalRewardShown = prefs.getBool("isFinalRewardShown_$levelKey") ?? false;
+
+    setState(() {});
   }
 
   Future<void> _saveProgress() async {
+    await ProgressService.saveStars(levelKey, totalStars);
+    await ProgressService.saveLearnedIndexes(levelKey, learnedIndexes);
+  }
+
+  Future<void> _setFinalRewardShown() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt("totalStars", totalStars);
-    await prefs.setInt("totalDiamonds", totalDiamonds);
+    await prefs.setBool("isFinalRewardShown_$levelKey", true);
+    setState(() => isFinalRewardShown = true);
+  }
+
+  void _markLearned(int index) async {
+    if (!learnedIndexes.contains(index)) {
+      setState(() {
+        learnedIndexes.add(index);
+        totalStars += 1;
+      });
+      await _saveProgress();
+
+      // 🎊 confetti nhỏ khi học xong 1 số
+      if (mounted) _miniConfettiController.play();
+
+      // 🎯 Khi học xong tất cả
+      if (totalStars == numbers.length && !isFinalRewardShown) {
+        if (mounted) _confettiController.play();
+
+        // 🔹 mở khóa level tiếp theo trước
+        final levels = await ProgressService.loadLevels();
+        final currentIdx = levels.indexWhere(
+          (lv) => lv.levelKey == levelKey || lv.route == "/learn_numbers_20",
+        );
+        if (currentIdx != -1) {
+          levels[currentIdx].state = LevelState.completed;
+          if (currentIdx + 1 < levels.length &&
+              levels[currentIdx + 1].state == LevelState.locked) {
+            levels[currentIdx + 1].state = LevelState.playable;
+          }
+          await ProgressService.saveLevels(levels);
+        }
+
+        // 🔹 sau đó mới set flag và popup
+        await _setFinalRewardShown();
+        _showRewardPopup(isFinal: true);
+      }
+    }
   }
 
   void _next() {
     if (currentIndex < numbers.length - 1) {
       setState(() => currentIndex++);
+      _markLearned(currentIndex);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        WowCard.triggerAnimation(context);
+      });
     }
   }
 
   void _prev() {
     if (currentIndex > 0) {
       setState(() => currentIndex--);
+      _markLearned(currentIndex);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        WowCard.triggerAnimation(context);
+      });
     }
   }
 
   Future<void> _playAudio(String path) async {
     await _player.stop();
     await _player.play(AssetSource(path.replaceFirst('assets/', '')));
-    setState(() {
-      totalDiamonds += 1;
-    });
-    _saveProgress();
   }
 
-  void _showRewardPopup() {
+  Future<void> _showRewardPopup({bool isFinal = false}) async {
     final random = Random();
     final icon = rewardIcons[random.nextInt(rewardIcons.length)];
+    final size = MediaQuery.of(context).size;
 
-    setState(() {
-      totalStars += 1;
-    });
-    _saveProgress();
+    if (isFinal) {
+      try {
+        await _player.play(AssetSource("audio/victory.mp3"));
+      } catch (_) {}
 
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) {
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.all(30),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  "assets/images/mascot/mascot_10.png",
+                  width: size.width * 0.5,
+                  height: size.width * 0.5,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(height: 16),
+                ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [Colors.orange, Colors.pink, Colors.purple],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ).createShader(bounds),
+                  child: Text(
+                    "🎉 Chúc mừng bé đã học xong!\n⭐ $totalStars / ${numbers.length} ⭐",
+                    style: TextStyle(
+                      fontSize: size.width * 0.08,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "Bé thật tuyệt vời! Hãy khoe ngay với bố mẹ nhé 👏👏",
+                  style: TextStyle(
+                    fontSize: size.width * 0.05,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        blurRadius: 8,
+                        color: Colors.black45,
+                        offset: Offset(2, 2),
+                      ),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        },
+      );
+
+      Future.delayed(const Duration(seconds: 4), () {
+        if (mounted && Navigator.canPop(context)) Navigator.pop(context);
+      });
+      return;
+    }
+
+    // popup thường
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -128,33 +228,23 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ScaleTransition(
-                scale: CurvedAnimation(
-                  parent: _buttonAnimController,
-                  curve: Curves.elasticOut,
-                ),
-                child: Column(
-                  children: [
-                    Icon(icon, size: 100, color: Colors.yellow),
-                    const SizedBox(height: 16),
-                    Text(
-                      "Tuyệt vời! Bạn được +1 ⭐\nTổng: ⭐ $totalStars | 💎 $totalDiamonds",
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        shadows: [
-                          Shadow(
-                            blurRadius: 10,
-                            color: Colors.black45,
-                            offset: Offset(2, 2),
-                          ),
-                        ],
-                      ),
-                      textAlign: TextAlign.center,
+              Icon(icon, size: 100, color: Colors.yellow),
+              const SizedBox(height: 16),
+              Text(
+                "Tuyệt vời! Bạn đã học ⭐ $totalStars / ${numbers.length}",
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(
+                      blurRadius: 10,
+                      color: Colors.black45,
+                      offset: Offset(2, 2),
                     ),
                   ],
                 ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -162,9 +252,8 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
       },
     );
 
-    Future.delayed(const Duration(seconds: 3), () {
-      Navigator.pop(context);
-      Navigator.pop(context, true);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted && Navigator.canPop(context)) Navigator.pop(context);
     });
   }
 
@@ -175,77 +264,41 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
     }
 
     final item = numbers[currentIndex];
+    final size = MediaQuery.of(context).size;
 
     return BaseScreen(
       title: "🌟 Số 11–20 🌟",
       child: Stack(
-        alignment: Alignment.center,
         children: [
           SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.only(bottom: size.height * 0.25),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 500),
-                  transitionBuilder: (child, anim) => SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(1, 0),
-                      end: Offset.zero,
-                    ).animate(anim),
-                    child: child,
-                  ),
-                  child: Container(
-                    key: ValueKey(currentIndex),
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 16,
-                    ),
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                // ⭐ progress bar
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: size.height * 0.015),
+                  child: SizedBox(
+                    width: size.width * 0.7,
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: LinearProgressIndicator(
+                            value: (totalStars / numbers.length).clamp(0, 1),
+                            minHeight: size.height * 0.04,
+                            backgroundColor: Colors.grey[300],
+                            valueColor: const AlwaysStoppedAnimation(
+                              Colors.amber,
+                            ),
+                          ),
+                        ),
                         Text(
-                          item["value"].toString(),
+                          "⭐ $totalStars / ${numbers.length}",
                           style: TextStyle(
-                            fontSize: 100,
+                            fontSize: size.width * 0.05,
                             fontWeight: FontWeight.bold,
-                            color: Colors.deepPurple,
-                            shadows: [
-                              Shadow(
-                                blurRadius: 20,
-                                color: Colors.deepPurpleAccent.withOpacity(0.6),
-                                offset: const Offset(0, 0),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        ScaleTransition(
-                          scale: _mascotScale,
-                          child: Image.asset(
-                            item["image"],
-                            width: 160,
-                            height: 160,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          item["text"],
-                          style: const TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.w500,
                             color: Colors.black87,
                           ),
                         ),
@@ -253,7 +306,10 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
                     ),
                   ),
                 ),
-                const SizedBox(height: 30),
+
+                WowCard(imagePath: item["image"], text: item["text"]),
+
+                SizedBox(height: size.height * 0.04),
 
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
@@ -261,59 +317,45 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 28,
-                      vertical: 14,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: size.width * 0.08,
+                      vertical: size.height * 0.018,
                     ),
                   ),
-                  icon: const Icon(Icons.volume_up, size: 28),
-                  label: const Text("Nghe đọc", style: TextStyle(fontSize: 22)),
+                  icon: Icon(Icons.volume_up, size: size.width * 0.07),
+                  label: Text(
+                    "Nghe",
+                    style: TextStyle(fontSize: size.width * 0.055),
+                  ),
                   onPressed: () => _playAudio(item["audio"]),
                 ),
-                const SizedBox(height: 30),
+
+                SizedBox(height: size.height * 0.04),
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _circleButton(Icons.arrow_back, _prev, Colors.pinkAccent),
-                    _circleButton(Icons.arrow_forward, _next, Colors.lightBlue),
+                    if (currentIndex > 0)
+                      _circleButton(
+                        Icons.arrow_back,
+                        _prev,
+                        Colors.pinkAccent,
+                        size,
+                      ),
+                    if (currentIndex < numbers.length - 1)
+                      _circleButton(
+                        Icons.arrow_forward,
+                        _next,
+                        Colors.lightBlue,
+                        size,
+                      ),
                   ],
-                ),
-                const SizedBox(height: 30),
-
-                ScaleTransition(
-                  scale: _buttonScale,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: currentIndex == numbers.length - 1
-                          ? Colors.green
-                          : Colors.grey,
-                      shape: const StadiumBorder(),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 40,
-                        vertical: 18,
-                      ),
-                    ),
-                    icon: const Icon(Icons.check_circle, size: 28),
-                    label: const Text(
-                      "Hoàn thành",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    onPressed: currentIndex == numbers.length - 1
-                        ? () {
-                            _buttonAnimController.forward(from: 0);
-                            _confettiController.play();
-                            _showRewardPopup();
-                          }
-                        : null,
-                  ),
                 ),
               ],
             ),
           ),
+
+          // 🎉 confetti lớn
           ConfettiWidget(
             confettiController: _confettiController,
             blastDirectionality: BlastDirectionality.explosive,
@@ -327,16 +369,36 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
             ],
             gravity: 0.3,
           ),
+
+          // 🎊 confetti nhỏ
+          Align(
+            alignment: Alignment.center,
+            child: ConfettiWidget(
+              confettiController: _miniConfettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              numberOfParticles: 10,
+              emissionFrequency: 0.5,
+              maxBlastForce: 10,
+              minBlastForce: 2,
+              colors: const [Colors.yellow, Colors.lightBlue, Colors.pink],
+              gravity: 0.5,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _circleButton(IconData icon, VoidCallback onTap, Color color) {
+  Widget _circleButton(
+    IconData icon,
+    VoidCallback onTap,
+    Color color,
+    Size size,
+  ) {
     return Ink(
       decoration: ShapeDecoration(shape: const CircleBorder(), color: color),
       child: IconButton(
-        icon: Icon(icon, size: 36, color: Colors.white),
+        icon: Icon(icon, size: size.width * 0.1, color: Colors.white),
         onPressed: onTap,
       ),
     );
@@ -344,9 +406,8 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
 
   @override
   void dispose() {
-    _mascotController.dispose();
     _confettiController.dispose();
-    _buttonAnimController.dispose();
+    _miniConfettiController.dispose();
     super.dispose();
   }
 }

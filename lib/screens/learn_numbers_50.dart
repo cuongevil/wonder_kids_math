@@ -11,6 +11,7 @@ import '../models/level.dart';
 import '../services/progress_service.dart';
 import '../widgets/wow_card.dart';
 import 'base_screen.dart';
+import 'learn_numbers.dart';
 
 class LearnNumbers50Screen extends StatefulWidget {
   const LearnNumbers50Screen({super.key});
@@ -21,7 +22,7 @@ class LearnNumbers50Screen extends StatefulWidget {
 
 class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
     with TickerProviderStateMixin {
-  final String levelKey = "0_10"; // 🔹 định danh level này
+  final String levelKey = "21_50"; // 🔹 định danh level này
   List<dynamic> numbers = [];
   int currentIndex = 0;
   int totalStars = 0;
@@ -54,7 +55,7 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
 
   Future<void> _loadNumbers() async {
     final String response = await rootBundle.loadString(
-      'assets/configs/numbers.json',
+      'assets/configs/numbers_50.json',
     );
     final data = await json.decode(response);
 
@@ -67,7 +68,6 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
     totalStars = await ProgressService.getStars(levelKey);
     learnedIndexes = await ProgressService.getLearnedIndexes(levelKey);
 
-    // lấy flag final reward
     final prefs = await SharedPreferences.getInstance();
     isFinalRewardShown = prefs.getBool("isFinalRewardShown_$levelKey") ?? false;
 
@@ -87,15 +87,6 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
     });
   }
 
-  // ✅ Reset flag để chơi lại
-  Future<void> _resetFinalRewardFlag() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool("isFinalRewardShown_$levelKey", false);
-    setState(() {
-      isFinalRewardShown = false;
-    });
-  }
-
   void _markLearned(int index) async {
     if (!learnedIndexes.contains(index)) {
       setState(() {
@@ -104,21 +95,16 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
       });
       await _saveProgress();
 
-      // 🎊 bắn confetti nhỏ khi học xong 1 số
-      if (mounted) {
-        _miniConfettiController.play();
-      }
+      if (mounted) _miniConfettiController.play();
 
-      // 🎯 Khi học xong tất cả và chưa hiện popup trước đó
+      // 🎯 Khi học xong tất cả
       if (totalStars == numbers.length && !isFinalRewardShown) {
-        if (mounted) {
-          _confettiController.play();
-        }
+        if (mounted) _confettiController.play();
 
-        // 🔹 Mở khóa level tiếp theo TRƯỚC
+        // 🔓 Mở khóa level tiếp theo (51–100)
         final levels = await ProgressService.loadLevels();
         final currentIdx = levels.indexWhere(
-              (lv) => lv.levelKey == levelKey || lv.route == "/learn_numbers",
+          (lv) => lv.levelKey == levelKey || lv.route == "/learn_numbers_50",
         );
         if (currentIdx != -1) {
           levels[currentIdx].state = LevelState.completed;
@@ -129,7 +115,6 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
           await ProgressService.saveLevels(levels);
         }
 
-        // 🔹 Cập nhật flag và show popup
         await _setFinalRewardShown();
         _showRewardPopup(isFinal: true);
       }
@@ -138,25 +123,21 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
 
   void _next() {
     if (currentIndex < numbers.length - 1) {
-      setState(() {
-        currentIndex++;
-      });
+      setState(() => currentIndex++);
       _markLearned(currentIndex);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        WowCard.triggerAnimation(context);
-      });
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => WowCard.triggerAnimation(context),
+      );
     }
   }
 
   void _prev() {
     if (currentIndex > 0) {
-      setState(() {
-        currentIndex--;
-      });
+      setState(() => currentIndex--);
       _markLearned(currentIndex);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        WowCard.triggerAnimation(context);
-      });
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => WowCard.triggerAnimation(context),
+      );
     }
   }
 
@@ -237,7 +218,7 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
       return;
     }
 
-    // Popup thường
+    // 🎁 Popup thưởng thường
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -287,7 +268,7 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
     final size = MediaQuery.of(context).size;
 
     return BaseScreen(
-      title: "🌟 Số 0–10 🌟",
+      title: "🌟 Số 21–50 🌟",
       child: Stack(
         children: [
           const AnimatedBackground(),
@@ -296,7 +277,6 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
             padding: EdgeInsets.only(bottom: size.height * 0.25),
             child: Column(
               children: [
-                // ⭐ progress bar
                 Padding(
                   padding: EdgeInsets.symmetric(vertical: size.height * 0.015),
                   child: SizedBox(
@@ -327,12 +307,8 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
                     ),
                   ),
                 ),
-
-                // 📌 WowCard
                 WowCard(imagePath: item["image"], text: item["text"]),
-
                 SizedBox(height: size.height * 0.04),
-
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orangeAccent,
@@ -351,9 +327,7 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
                   ),
                   onPressed: () => _playAudio(item["audio"]),
                 ),
-
                 SizedBox(height: size.height * 0.04),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -376,12 +350,9 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
               ],
             ),
           ),
-
-          // 🎉 Confetti lớn khi hoàn thành
           ConfettiWidget(
             confettiController: _confettiController,
             blastDirectionality: BlastDirectionality.explosive,
-            shouldLoop: false,
             colors: const [
               Colors.red,
               Colors.blue,
@@ -391,8 +362,6 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
             ],
             gravity: 0.3,
           ),
-
-          // 🎊 Confetti nhỏ khi học từng số
           Align(
             alignment: Alignment.center,
             child: ConfettiWidget(
@@ -412,11 +381,11 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
   }
 
   Widget _circleButton(
-      IconData icon,
-      VoidCallback onTap,
-      Color color,
-      Size size,
-      ) {
+    IconData icon,
+    VoidCallback onTap,
+    Color color,
+    Size size,
+  ) {
     return Ink(
       decoration: ShapeDecoration(shape: const CircleBorder(), color: color),
       child: IconButton(
@@ -430,110 +399,6 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
   void dispose() {
     _confettiController.dispose();
     _miniConfettiController.dispose();
-    super.dispose();
-  }
-}
-
-//
-// 🌥️ Animated Background
-//
-class AnimatedBackground extends StatefulWidget {
-  const AnimatedBackground({super.key});
-
-  @override
-  State<AnimatedBackground> createState() => _AnimatedBackgroundState();
-}
-
-class _AnimatedBackgroundState extends State<AnimatedBackground>
-    with TickerProviderStateMixin {
-  late AnimationController _cloudController;
-  late AnimationController _balloonController;
-  late AnimationController _starController;
-  final Random _random = Random();
-
-  @override
-  void initState() {
-    super.initState();
-    _cloudController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 30),
-    )..repeat();
-    _balloonController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 12),
-    )..repeat();
-    _starController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        AnimatedBuilder(
-          animation: _cloudController,
-          builder: (_, __) {
-            return Positioned(
-              top: 80,
-              left: MediaQuery.of(context).size.width *
-                  (_cloudController.value * 2 - 1),
-              child: Icon(
-                Icons.cloud,
-                size: 120,
-                color: Colors.white.withOpacity(0.8),
-              ),
-            );
-          },
-        ),
-        AnimatedBuilder(
-          animation: _balloonController,
-          builder: (_, __) {
-            return Positioned(
-              bottom: MediaQuery.of(context).size.height *
-                  (1 - _balloonController.value),
-              left: MediaQuery.of(context).size.width * 0.7,
-              child: Icon(
-                Icons.celebration,
-                size: 60,
-                color: Colors.pink.withOpacity(0.8),
-              ),
-            );
-          },
-        ),
-        ...List.generate(6, (i) {
-          final left =
-              _random.nextDouble() * MediaQuery.of(context).size.width;
-          final top =
-              _random.nextDouble() * MediaQuery.of(context).size.height * 0.5;
-          return AnimatedBuilder(
-            animation: _starController,
-            builder: (_, __) {
-              return Positioned(
-                left: left,
-                top: top,
-                child: Opacity(
-                  opacity: _starController.value,
-                  child: Icon(
-                    Icons.star,
-                    size: 18,
-                    color: Colors.yellow.withOpacity(0.8),
-                  ),
-                ),
-              );
-            },
-          );
-        }),
-      ],
-    );
-  }
-
-  @override
-  void dispose() {
-    _cloudController.dispose();
-    _balloonController.dispose();
-    _starController.dispose();
     super.dispose();
   }
 }

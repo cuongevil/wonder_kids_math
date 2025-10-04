@@ -58,6 +58,7 @@ class _AppScaffoldState extends State<AppScaffold> {
   }
 
   /// 🐞 Debug popup
+  /// 🐞 Debug popup
   Future<void> _debugLevels() async {
     final totalStars = await ProgressService.getGrandTotal();
     if (!mounted) return;
@@ -103,17 +104,34 @@ class _AppScaffoldState extends State<AppScaffold> {
                 }
               }
 
-              // 🔹 Cập nhật lại levels trong UI
               widget.onLevelsChanged?.call(defaultLevels);
 
-              // 🔹 Đóng dialog + quay về MapScreen
               if (mounted) {
                 Navigator.pop(context);
                 Navigator.pushNamedAndRemoveUntil(context, "/", (_) => false);
                 _showSnack("🔄 Đã reset toàn bộ levels về trạng thái ban đầu");
               }
             },
-            child: const Text("🔄 Chơi lại toàn bộ levels"),
+            child: const Text("🔄 Chơi lại toàn bộ"),
+          ),
+          // 🔓 Unlock All Levels
+          TextButton(
+            onPressed: () async {
+              final updated = _defaultLevels();
+              for (var lv in updated) {
+                if (lv.state == LevelState.locked) {
+                  lv.state = LevelState.playable;
+                }
+              }
+              await ProgressService.saveLevels(updated);
+              widget.onLevelsChanged?.call(updated);
+
+              if (mounted) {
+                Navigator.pop(context);
+                _showSnack("🔓 Đã mở khóa toàn bộ levels (debug)");
+              }
+            },
+            child: const Text("🔓 Unlock All"),
           ),
           TextButton(
             onPressed: () {
@@ -156,27 +174,27 @@ class _AppScaffoldState extends State<AppScaffold> {
       ),
       Level(
         index: 2,
-        title: 'Số 11–20',
+        title: 'Số 0–20',
         type: LevelType.topic,
         state: LevelState.locked,
         route: '/learn_numbers_20',
-        levelKey: "11_20",
+        levelKey: "0_20",
       ),
       Level(
         index: 3,
-        title: 'Số 21–50',
+        title: 'Số 0–50',
         type: LevelType.topic,
         state: LevelState.locked,
         route: '/learn_numbers_50',
-        levelKey: "21_50",
+        levelKey: "0_50",
       ),
       Level(
         index: 4,
-        title: 'Số 51–100',
+        title: 'Số 0–100',
         type: LevelType.topic,
         state: LevelState.locked,
         route: '/learn_numbers_100',
-        levelKey: "51_100",
+        levelKey: "0_100",
       ),
       Level(
         index: 5,
