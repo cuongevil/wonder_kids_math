@@ -34,6 +34,7 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _sparkleController.stop();
     _sparkleController.dispose();
     super.dispose();
   }
@@ -87,7 +88,6 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
     final bool isLocked = widget.level.state == LevelState.locked;
 
     return GestureDetector(
-      // 🔹 Locked thì chặn, Completed & Playable bấm được
       onTap: isLocked ? null : widget.onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -98,7 +98,6 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // 🔹 Halo + sparkle chỉ hiện nếu node không bị khóa
                 if (!isLocked) ...[
                   Container(
                     width: 140,
@@ -118,8 +117,6 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
                   _buildSparkle(60, -1.5, 12, Colors.white.withOpacity(0.8)),
                   _buildSparkle(85, 0.7, 16, Colors.orangeAccent.withOpacity(0.7)),
                 ],
-
-                // 🔹 Node chính
                 Container(
                   width: 100,
                   height: 100,
@@ -167,12 +164,10 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
                   fontWeight: FontWeight.w900,
                   color: titleColor,
                   shadows: [
-                    // 🔹 Viền đen rõ ràng
                     const Shadow(offset: Offset(1, 1), blurRadius: 2, color: Colors.black87),
                     const Shadow(offset: Offset(-1, -1), blurRadius: 2, color: Colors.black87),
                     const Shadow(offset: Offset(1, -1), blurRadius: 2, color: Colors.black87),
                     const Shadow(offset: Offset(-1, 1), blurRadius: 2, color: Colors.black87),
-                    // 🔹 Glow theo state
                     Shadow(offset: Offset(0, 0), blurRadius: 8, color: titleColor.withOpacity(0.8)),
                   ],
                 ),

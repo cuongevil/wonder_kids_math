@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/level.dart';
 import '../services/progress_service.dart';
@@ -33,17 +34,16 @@ class _AppScaffoldState extends State<AppScaffold> {
 
   Future<void> _resetLevels() async {
     final defaultLevels = _defaultLevels();
-    await ProgressService.saveLevels(defaultLevels);
+    await ProgressService.resetAll();
     widget.onLevelsChanged?.call(defaultLevels);
     _showSnack("Đã reset levels");
   }
 
   Future<void> _clearCache() async {
-    await ProgressService.clear();
+    await ProgressService.resetAll(); // 🔹 xóa sao + learnedIndexes
     final defaultLevels = _defaultLevels();
-    await ProgressService.saveLevels(defaultLevels);
     widget.onLevelsChanged?.call(defaultLevels);
-    _showSnack("Đã xóa cache");
+    _showSnack("Đã xóa cache toàn bộ");
   }
 
   Future<void> _unlockAll() async {
@@ -53,54 +53,72 @@ class _AppScaffoldState extends State<AppScaffold> {
         lv.state = LevelState.playable;
       }
     }
-    await ProgressService.saveLevels(updated);
     widget.onLevelsChanged?.call(updated);
     _showSnack("Đã mở khóa tất cả level");
   }
 
   /// 🐞 Debug popup
   Future<void> _debugLevels() async {
-    final loaded = await ProgressService.loadLevels();
+    final totalStars = await ProgressService.getGrandTotal();
     if (!mounted) return;
 
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text("🐞 Debug Levels"),
+        content: Text("⭐ Tổng sao: $totalStars"),
         actions: [
+          // Reset toàn bộ progress (grand total + levels)
           TextButton(
             onPressed: () async {
-              await ProgressService.saveLevels(levels);
-              _showSnack("Save levels → OK");
-            },
-            child: const Text("💾 Save"),
-          ),
-          TextButton(
-            onPressed: () async {
-              final l = await ProgressService.loadLevels();
-              Navigator.pop(context);
-              _showSnack("Load levels: ${l.length}");
-            },
-            child: const Text("📂 Load"),
-          ),
-          TextButton(
-            onPressed: () async {
-              await ProgressService.resetLevels(_defaultLevels());
-              Navigator.pop(context);
-              _showSnack("Reset levels → OK");
+              await ProgressService.resetAll();
+              if (mounted) Navigator.pop(context);
+              _showSnack("Reset all progress → OK");
             },
             child: const Text("🔄 Reset"),
           ),
+          // Clear SharedPreferences
           TextButton(
             onPressed: () async {
               await ProgressService.clear();
-              Navigator.pop(context);
-              _showSnack("Clear cache → OK");
+              if (mounted) Navigator.pop(context);
+              _showSnack("Clear SharedPreferences → OK");
             },
             child: const Text("🗑️ Clear"),
           ),
+          // ✅ Chơi lại từ đầu toàn bộ levels
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () async {
+              final defaultLevels = _defaultLevels();
+              final prefs = await SharedPreferences.getInstance();
+
+              for (var lv in defaultLevels) {
+                if (lv.levelKey != null && lv.levelKey!.isNotEmpty) {
+                  await ProgressService.saveStars(lv.levelKey!, 0);
+                  await ProgressService.saveLearnedIndexes(lv.levelKey!, {});
+                  await prefs.setBool(
+                    "isFinalRewardShown_${lv.levelKey}",
+                    false,
+                  );
+                }
+              }
+
+              // 🔹 Cập nhật lại levels trong UI
+              widget.onLevelsChanged?.call(defaultLevels);
+
+              // 🔹 Đóng dialog + quay về MapScreen
+              if (mounted) {
+                Navigator.pop(context);
+                Navigator.pushNamedAndRemoveUntil(context, "/", (_) => false);
+                _showSnack("🔄 Đã reset toàn bộ levels về trạng thái ban đầu");
+              }
+            },
+            child: const Text("🔄 Chơi lại toàn bộ levels"),
+          ),
+          TextButton(
+            onPressed: () {
+              if (mounted) Navigator.pop(context);
+            },
             child: const Text("Đóng"),
           ),
         ],
@@ -134,6 +152,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         type: LevelType.topic,
         state: LevelState.locked,
         route: '/learn_numbers',
+        levelKey: "0_10",
       ),
       Level(
         index: 2,
@@ -141,6 +160,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         type: LevelType.topic,
         state: LevelState.locked,
         route: '/learn_numbers_20',
+        levelKey: "11_20",
       ),
       Level(
         index: 3,
@@ -148,6 +168,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         type: LevelType.topic,
         state: LevelState.locked,
         route: '/game_addition10',
+        levelKey: "addition10",
       ),
       Level(
         index: 4,
@@ -155,6 +176,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         type: LevelType.topic,
         state: LevelState.locked,
         route: '/game_subtraction10',
+        levelKey: "subtraction10",
       ),
       Level(
         index: 5,
@@ -162,6 +184,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         type: LevelType.topic,
         state: LevelState.locked,
         route: '/game_compare',
+        levelKey: "compare",
       ),
       Level(
         index: 6,
@@ -169,6 +192,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         type: LevelType.topic,
         state: LevelState.locked,
         route: '/game_addition20',
+        levelKey: "addition20",
       ),
       Level(
         index: 7,
@@ -176,6 +200,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         type: LevelType.topic,
         state: LevelState.locked,
         route: '/game_subtraction20',
+        levelKey: "subtraction20",
       ),
       Level(
         index: 8,
@@ -183,6 +208,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         type: LevelType.topic,
         state: LevelState.locked,
         route: '/game_shapes',
+        levelKey: "shapes",
       ),
       Level(
         index: 9,
@@ -190,6 +216,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         type: LevelType.topic,
         state: LevelState.locked,
         route: '/game_measure_time',
+        levelKey: "measure",
       ),
       Level(
         index: 10,
@@ -197,6 +224,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         type: LevelType.boss,
         state: LevelState.locked,
         route: '/game_final_boss',
+        levelKey: "final_boss",
       ),
       Level(
         index: 11,

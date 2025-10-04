@@ -28,13 +28,22 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+    _confettiController =
+        ConfettiController(duration: const Duration(seconds: 2));
+
     _bounceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
       lowerBound: 0.95,
       upperBound: 1.05,
-    )..repeat(reverse: true);
+    );
+
+    // 🔹 chỉ gọi repeat khi widget còn mounted
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _bounceController.repeat(reverse: true);
+      }
+    });
 
     _init();
 
@@ -45,26 +54,32 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    // 🔹 dừng trước khi dispose
     _bounceController.stop();
     _confettiController.stop();
-    _confettiController.dispose();
+
+    _scrollController.dispose();
     _bounceController.dispose();
+    _confettiController.dispose();
+
     super.dispose();
   }
 
   /// 🔹 Khởi tạo dữ liệu level
   Future<void> _init() async {
-    final saved = await ProgressService.loadLevels();
-    if (saved.isNotEmpty) {
-      levels = saved;
-    } else {
-      levels = _defaultLevels();
-      await ProgressService.saveLevels(levels);
+    levels = await ProgressService.ensureDefaultLevels(_defaultLevels);
+
+    // load stars/total cho từng level
+    for (var lv in levels) {
+      if (lv.levelKey != null) {
+        lv.stars = await ProgressService.getStars(lv.levelKey!);
+        lv.total = await _getTotalForLevel(lv.levelKey!);
+      }
     }
 
     // 🔹 tìm index playable đầu tiên
-    final firstPlayableIndex = levels.indexWhere((e) => e.state == LevelState.playable);
+    final firstPlayableIndex =
+    levels.indexWhere((e) => e.state == LevelState.playable);
 
     if (mounted) {
       setState(() {});
@@ -72,10 +87,13 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         if (_scrollController.hasClients && firstPlayableIndex != -1) {
           const spacing = 240.0;
           final screenH = MediaQuery.of(context).size.height;
-          final topPadding = kToolbarHeight + MediaQuery.of(context).padding.top + 16;
+          final topPadding =
+              kToolbarHeight + MediaQuery.of(context).padding.top + 16;
 
-          final targetOffset =
-              firstPlayableIndex * spacing - screenH / 2 + spacing / 2 + topPadding;
+          final targetOffset = firstPlayableIndex * spacing -
+              screenH / 2 +
+              spacing / 2 +
+              topPadding;
 
           _scrollController.jumpTo(
             targetOffset.clamp(0, _scrollController.position.maxScrollExtent),
@@ -85,20 +103,48 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     }
   }
 
+  /// 🔹 Tổng số bài trong level theo key
+  Future<int> _getTotalForLevel(String key) async {
+    switch (key) {
+      case "0_10":
+        return 11;
+      case "11_20":
+        return 10;
+      case "addition10":
+        return 10;
+      case "subtraction10":
+        return 10;
+      case "compare":
+        return 8;
+      case "addition20":
+        return 10;
+      case "subtraction20":
+        return 10;
+      case "shapes":
+        return 12;
+      case "measure":
+        return 10;
+      case "final_boss":
+        return 20;
+      default:
+        return 0;
+    }
+  }
+
   /// 🔹 Danh sách level mặc định
   List<Level> _defaultLevels() {
     return [
       Level(index: 0, title: 'Bắt đầu', type: LevelType.start, state: LevelState.playable),
-      Level(index: 1, title: 'Số 0–10', type: LevelType.topic, state: LevelState.locked, route: '/learn_numbers'),
-      Level(index: 2, title: 'Số 11–20', type: LevelType.topic, state: LevelState.locked, route: '/learn_numbers_20'),
-      Level(index: 3, title: 'Cộng ≤10', type: LevelType.topic, state: LevelState.locked, route: '/game_addition10'),
-      Level(index: 4, title: 'Trừ ≤10', type: LevelType.topic, state: LevelState.locked, route: '/game_subtraction10'),
-      Level(index: 5, title: 'So Sánh', type: LevelType.topic, state: LevelState.locked, route: '/game_compare'),
-      Level(index: 6, title: 'Cộng ≤20', type: LevelType.topic, state: LevelState.locked, route: '/game_addition20'),
-      Level(index: 7, title: 'Trừ ≤20', type: LevelType.topic, state: LevelState.locked, route: '/game_subtraction20'),
-      Level(index: 8, title: 'Hình Học', type: LevelType.topic, state: LevelState.locked, route: '/game_shapes'),
-      Level(index: 9, title: 'Đo Lường', type: LevelType.topic, state: LevelState.locked, route: '/game_measure_time'),
-      Level(index: 10, title: 'Tổng hợp', type: LevelType.boss, state: LevelState.locked, route: '/game_final_boss'),
+      Level(index: 1, title: 'Số 0–10', type: LevelType.topic, state: LevelState.locked, route: '/learn_numbers', levelKey: "0_10"),
+      Level(index: 2, title: 'Số 11–20', type: LevelType.topic, state: LevelState.locked, route: '/learn_numbers_20', levelKey: "11_20"),
+      Level(index: 3, title: 'Cộng ≤10', type: LevelType.topic, state: LevelState.locked, route: '/game_addition10', levelKey: "addition10"),
+      Level(index: 4, title: 'Trừ ≤10', type: LevelType.topic, state: LevelState.locked, route: '/game_subtraction10', levelKey: "subtraction10"),
+      Level(index: 5, title: 'So Sánh', type: LevelType.topic, state: LevelState.locked, route: '/game_compare', levelKey: "compare"),
+      Level(index: 6, title: 'Cộng ≤20', type: LevelType.topic, state: LevelState.locked, route: '/game_addition20', levelKey: "addition20"),
+      Level(index: 7, title: 'Trừ ≤20', type: LevelType.topic, state: LevelState.locked, route: '/game_subtraction20', levelKey: "subtraction20"),
+      Level(index: 8, title: 'Hình Học', type: LevelType.topic, state: LevelState.locked, route: '/game_shapes', levelKey: "shapes"),
+      Level(index: 9, title: 'Đo Lường', type: LevelType.topic, state: LevelState.locked, route: '/game_measure_time', levelKey: "measure"),
+      Level(index: 10, title: 'Tổng hợp', type: LevelType.boss, state: LevelState.locked, route: '/game_final_boss', levelKey: "final_boss"),
       Level(index: 11, title: 'Kết thúc', type: LevelType.end, state: LevelState.locked),
     ];
   }
@@ -156,7 +202,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     const double minMargin = 8.0;
     const double bias = -40.0;
 
-    final double topPadding = kToolbarHeight + MediaQuery.of(context).padding.top + 16;
+    final double topPadding =
+        kToolbarHeight + MediaQuery.of(context).padding.top + 16;
 
     return AppScaffold(
       title: "Học toán",
@@ -190,15 +237,18 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                             : screenH / 2;
                         final distance = (levelTop - centerY).abs();
 
-                        final scale = (1.1 - (distance / screenH)).clamp(0.8, 1.1);
-                        final opacity = (1.2 - (distance / (screenH * 0.7))).clamp(0.4, 1.0);
+                        final scale =
+                        (1.1 - (distance / screenH)).clamp(0.8, 1.1);
+                        final opacity =
+                        (1.2 - (distance / (screenH * 0.7))).clamp(0.4, 1.0);
                         final isCenter = distance < 50;
 
                         Widget node = LevelNode(
                           level: levels[i],
                           onTap: () => _openLevel(levels[i]),
                           isCenter: isCenter,
-                          isNight: DateTime.now().hour >= 18 || DateTime.now().hour < 6,
+                          isNight: DateTime.now().hour >= 18 ||
+                              DateTime.now().hour < 6,
                         );
 
                         if (isCenter) {
@@ -208,9 +258,11 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                           );
                         }
 
-                        double rawLeft =
-                            (screenW - nodeSize) / 2 + sin(i * 0.8) * safeAmplitude + bias;
-                        double left = rawLeft.clamp(minMargin, screenW - nodeSize - minMargin);
+                        double rawLeft = (screenW - nodeSize) / 2 +
+                            sin(i * 0.8) * safeAmplitude +
+                            bias;
+                        double left = rawLeft
+                            .clamp(minMargin, screenW - nodeSize - minMargin);
 
                         return Positioned(
                           top: levelTop,

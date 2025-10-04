@@ -3,39 +3,106 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/level.dart';
 
 class ProgressService {
-  static const String _levelsKey = "levels";
+  // --------------------------
+  // ⭐ Progress theo levelKey
+  // --------------------------
 
-  /// 🔹 Lưu danh sách level vào cache
-  static Future<void> saveLevels(List<Level> levels) async {
+  static Future<int> getStars(String levelKey) async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonData = jsonEncode(levels.map((e) => e.toJson()).toList());
-    await prefs.setString(_levelsKey, jsonData);
+    return prefs.getInt("stars_level_$levelKey") ?? 0;
   }
 
-  /// 🔹 Load danh sách level từ cache (luôn trả về List, không null)
-  static Future<List<Level>> loadLevels() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final jsonData = prefs.getString(_levelsKey);
-      if (jsonData == null) return [];
-      final List<dynamic> decoded = jsonDecode(jsonData);
-      return decoded.map((e) => Level.fromJson(e)).toList();
-    } catch (e) {
-      // Nếu dữ liệu bị lỗi → reset sang rỗng
-      return [];
+  static Future<void> saveStars(String levelKey, int stars) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt("stars_level_$levelKey", stars);
+    await _updateGrandTotal();
+  }
+
+  static Future<Set<int>> getLearnedIndexes(String levelKey) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.containsKey("learnedIndexes_level_$levelKey")) {
+      return Set<int>.from(
+          jsonDecode(prefs.getString("learnedIndexes_level_$levelKey")!));
     }
+    return {};
   }
 
-  /// 🔹 Reset về mặc định
-  static Future<void> resetLevels(List<Level> defaults) async {
+  static Future<void> saveLearnedIndexes(
+      String levelKey, Set<int> indexes) async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonData = jsonEncode(defaults.map((e) => e.toJson()).toList());
-    await prefs.setString(_levelsKey, jsonData);
+    await prefs.setString(
+        "learnedIndexes_level_$levelKey", jsonEncode(indexes.toList()));
   }
 
-  /// 🔹 Xóa cache hoàn toàn
+  static Future<int> getGrandTotal() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt("totalStars") ?? 0;
+  }
+
+  static Future<void> _updateGrandTotal() async {
+    final prefs = await SharedPreferences.getInstance();
+    int grandTotal = 0;
+    for (var key in prefs.getKeys()) {
+      if (key.startsWith("stars_level_")) {
+        grandTotal += prefs.getInt(key) ?? 0;
+      }
+    }
+    await prefs.setInt("totalStars", grandTotal);
+  }
+
+  static Future<void> resetLevel(String levelKey) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove("stars_level_$levelKey");
+    await prefs.remove("learnedIndexes_level_$levelKey");
+    await _updateGrandTotal();
+  }
+
+  static Future<void> resetAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys().where((k) =>
+    k.startsWith("stars_level_") || k.startsWith("learnedIndexes_level_"));
+    for (var k in keys) {
+      await prefs.remove(k);
+    }
+    await prefs.setInt("totalStars", 0);
+    await prefs.remove("levels");
+  }
+
   static Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_levelsKey);
+    await prefs.clear();
+  }
+
+  // --------------------------
+  // 📌 Quản lý danh sách Level
+  // --------------------------
+
+  static Future<void> saveLevels(List<Level> levels) async {
+    final prefs = await SharedPreferences.getInstance();
+    final data = levels.map((e) => e.toJson()).toList();
+    await prefs.setString("levels", jsonEncode(data));
+  }
+
+  static Future<List<Level>> loadLevels() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!prefs.containsKey("levels")) return [];
+    final jsonStr = prefs.getString("levels")!;
+    final data = jsonDecode(jsonStr) as List;
+    return data.map((e) => Level.fromJson(e)).toList();
+  }
+
+  static Future<void> resetLevels(List<Level> defaultLevels) async {
+    await saveLevels(defaultLevels);
+  }
+
+  /// 🔹 Tiện ích: luôn đảm bảo có dữ liệu levels
+  static Future<List<Level>> ensureDefaultLevels(
+      List<Level> Function() defaultBuilder) async {
+    final loaded = await loadLevels();
+    if (loaded.isNotEmpty) return loaded;
+
+    final defaults = defaultBuilder();
+    await saveLevels(defaults);
+    return defaults;
   }
 }
