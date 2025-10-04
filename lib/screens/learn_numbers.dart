@@ -114,13 +114,11 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
         if (mounted) {
           _confettiController.play();
         }
-        _showRewardPopup(isFinal: true);
-        await _setFinalRewardShown();
 
-        // 🔹 Mở khóa level tiếp theo
+        // 🔹 Mở khóa level tiếp theo TRƯỚC
         final levels = await ProgressService.loadLevels();
         final currentIdx = levels.indexWhere(
-          (lv) => lv.levelKey == levelKey || lv.route == "/learn_numbers",
+              (lv) => lv.levelKey == levelKey || lv.route == "/learn_numbers",
         );
         if (currentIdx != -1) {
           levels[currentIdx].state = LevelState.completed;
@@ -130,6 +128,10 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
           }
           await ProgressService.saveLevels(levels);
         }
+
+        // 🔹 Cập nhật flag và show popup
+        await _setFinalRewardShown();
+        _showRewardPopup(isFinal: true);
       }
     }
   }
@@ -410,11 +412,11 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
   }
 
   Widget _circleButton(
-    IconData icon,
-    VoidCallback onTap,
-    Color color,
-    Size size,
-  ) {
+      IconData icon,
+      VoidCallback onTap,
+      Color color,
+      Size size,
+      ) {
     return Ink(
       decoration: ShapeDecoration(shape: const CircleBorder(), color: color),
       child: IconButton(
@@ -475,8 +477,7 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
           builder: (_, __) {
             return Positioned(
               top: 80,
-              left:
-                  MediaQuery.of(context).size.width *
+              left: MediaQuery.of(context).size.width *
                   (_cloudController.value * 2 - 1),
               child: Icon(
                 Icons.cloud,
@@ -490,8 +491,7 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
           animation: _balloonController,
           builder: (_, __) {
             return Positioned(
-              bottom:
-                  MediaQuery.of(context).size.height *
+              bottom: MediaQuery.of(context).size.height *
                   (1 - _balloonController.value),
               left: MediaQuery.of(context).size.width * 0.7,
               child: Icon(
@@ -503,7 +503,8 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
           },
         ),
         ...List.generate(6, (i) {
-          final left = _random.nextDouble() * MediaQuery.of(context).size.width;
+          final left =
+              _random.nextDouble() * MediaQuery.of(context).size.width;
           final top =
               _random.nextDouble() * MediaQuery.of(context).size.height * 0.5;
           return AnimatedBuilder(
