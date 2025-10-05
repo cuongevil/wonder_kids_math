@@ -21,7 +21,7 @@ class LearnNumbers20Screen extends StatefulWidget {
 
 class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
     with TickerProviderStateMixin {
-  final String levelKey = "11_20"; // 🔹 định danh level này
+  final String levelKey = "0_20"; // 🔹 định danh level này
   List<dynamic> numbers = [];
   int currentIndex = 0;
   int totalStars = 0;
@@ -42,22 +42,25 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
   @override
   void initState() {
     super.initState();
-    _loadNumbers();
-    _loadProgress();
-    _confettiController = ConfettiController(
-      duration: const Duration(seconds: 3),
-    );
-    _miniConfettiController = ConfettiController(
-      duration: const Duration(seconds: 1),
-    );
+    _initData(); // ✅ load và đánh dấu số đầu tiên
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _miniConfettiController = ConfettiController(duration: const Duration(seconds: 1));
+  }
+
+  /// 🔹 Load dữ liệu + tiến trình
+  Future<void> _initData() async {
+    await _loadNumbers();
+    await _loadProgress();
+
+    // ✅ Khi mở lần đầu, đánh dấu học luôn số đầu tiên
+    if (numbers.isNotEmpty && learnedIndexes.isEmpty) {
+      _markLearned(0);
+    }
   }
 
   Future<void> _loadNumbers() async {
-    final String response = await rootBundle.loadString(
-      'assets/configs/numbers_20.json',
-    );
+    final String response = await rootBundle.loadString('assets/configs/numbers_20.json');
     final data = await json.decode(response);
-
     setState(() {
       numbers = data["numbers"];
     });
@@ -66,10 +69,8 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
   Future<void> _loadProgress() async {
     totalStars = await ProgressService.getStars(levelKey);
     learnedIndexes = await ProgressService.getLearnedIndexes(levelKey);
-
     final prefs = await SharedPreferences.getInstance();
     isFinalRewardShown = prefs.getBool("isFinalRewardShown_$levelKey") ?? false;
-
     setState(() {});
   }
 
@@ -92,17 +93,15 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
       });
       await _saveProgress();
 
-      // 🎊 confetti nhỏ khi học xong 1 số
       if (mounted) _miniConfettiController.play();
 
       // 🎯 Khi học xong tất cả
       if (totalStars == numbers.length && !isFinalRewardShown) {
         if (mounted) _confettiController.play();
 
-        // 🔹 mở khóa level tiếp theo trước
         final levels = await ProgressService.loadLevels();
         final currentIdx = levels.indexWhere(
-          (lv) => lv.levelKey == levelKey || lv.route == "/learn_numbers_20",
+              (lv) => lv.levelKey == levelKey || lv.route == "/learn_numbers_20",
         );
         if (currentIdx != -1) {
           levels[currentIdx].state = LevelState.completed;
@@ -113,7 +112,6 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
           await ProgressService.saveLevels(levels);
         }
 
-        // 🔹 sau đó mới set flag và popup
         await _setFinalRewardShown();
         _showRewardPopup(isFinal: true);
       }
@@ -138,6 +136,28 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
         WowCard.triggerAnimation(context);
       });
     }
+  }
+
+  // 🎲 Học ngẫu nhiên
+  void _random() async {
+    if (numbers.isEmpty) return;
+
+    final random = Random();
+    int newIndex = currentIndex;
+    while (newIndex == currentIndex && numbers.length > 1) {
+      newIndex = random.nextInt(numbers.length);
+    }
+
+    // âm thanh click vui nhộn
+    try {
+      await _player.play(AssetSource("audio/random.mp3"));
+    } catch (_) {}
+
+    setState(() => currentIndex = newIndex);
+    _markLearned(currentIndex);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WowCard.triggerAnimation(context);
+    });
   }
 
   Future<void> _playAudio(String path) async {
@@ -217,7 +237,7 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
       return;
     }
 
-    // popup thường
+    // 🎁 Popup thường
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -267,7 +287,7 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
     final size = MediaQuery.of(context).size;
 
     return BaseScreen(
-      title: "🌟 Số 11–20 🌟",
+      title: "🌟 Số 0–20 🌟",
       child: Stack(
         children: [
           SingleChildScrollView(
@@ -275,7 +295,6 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
             padding: EdgeInsets.only(bottom: size.height * 0.25),
             child: Column(
               children: [
-                // ⭐ progress bar
                 Padding(
                   padding: EdgeInsets.symmetric(vertical: size.height * 0.015),
                   child: SizedBox(
@@ -289,9 +308,7 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
                             value: (totalStars / numbers.length).clamp(0, 1),
                             minHeight: size.height * 0.04,
                             backgroundColor: Colors.grey[300],
-                            valueColor: const AlwaysStoppedAnimation(
-                              Colors.amber,
-                            ),
+                            valueColor: const AlwaysStoppedAnimation(Colors.amber),
                           ),
                         ),
                         Text(
@@ -306,11 +323,8 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
                     ),
                   ),
                 ),
-
                 WowCard(imagePath: item["image"], text: item["text"]),
-
                 SizedBox(height: size.height * 0.04),
-
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orangeAccent,
@@ -329,33 +343,20 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
                   ),
                   onPressed: () => _playAudio(item["audio"]),
                 ),
-
                 SizedBox(height: size.height * 0.04),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     if (currentIndex > 0)
-                      _circleButton(
-                        Icons.arrow_back,
-                        _prev,
-                        Colors.pinkAccent,
-                        size,
-                      ),
+                      _circleButton(Icons.arrow_back, _prev, Colors.pinkAccent, size),
+                    _circleButton(Icons.shuffle, _random, Colors.amber, size),
                     if (currentIndex < numbers.length - 1)
-                      _circleButton(
-                        Icons.arrow_forward,
-                        _next,
-                        Colors.lightBlue,
-                        size,
-                      ),
+                      _circleButton(Icons.arrow_forward, _next, Colors.lightBlue, size),
                   ],
                 ),
               ],
             ),
           ),
-
-          // 🎉 confetti lớn
           ConfettiWidget(
             confettiController: _confettiController,
             blastDirectionality: BlastDirectionality.explosive,
@@ -369,8 +370,6 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
             ],
             gravity: 0.3,
           ),
-
-          // 🎊 confetti nhỏ
           Align(
             alignment: Alignment.center,
             child: ConfettiWidget(
@@ -389,12 +388,7 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
     );
   }
 
-  Widget _circleButton(
-    IconData icon,
-    VoidCallback onTap,
-    Color color,
-    Size size,
-  ) {
+  Widget _circleButton(IconData icon, VoidCallback onTap, Color color, Size size) {
     return Ink(
       decoration: ShapeDecoration(shape: const CircleBorder(), color: color),
       child: IconButton(

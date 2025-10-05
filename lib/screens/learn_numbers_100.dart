@@ -21,7 +21,7 @@ class LearnNumbers100Screen extends StatefulWidget {
 
 class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
     with TickerProviderStateMixin {
-  final String levelKey = "51_100"; // 🔹 định danh level này
+  final String levelKey = "0_100"; // 🔹 định danh level này
   List<dynamic> numbers = [];
   int currentIndex = 0;
   int totalStars = 0;
@@ -42,22 +42,24 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
   @override
   void initState() {
     super.initState();
-    _loadNumbers();
-    _loadProgress();
-    _confettiController = ConfettiController(
-      duration: const Duration(seconds: 3),
-    );
-    _miniConfettiController = ConfettiController(
-      duration: const Duration(seconds: 1),
-    );
+    _initData();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _miniConfettiController = ConfettiController(duration: const Duration(seconds: 1));
+  }
+
+  Future<void> _initData() async {
+    await _loadNumbers();
+    await _loadProgress();
+
+    // ✅ Khi mở lần đầu, đánh dấu học luôn số đầu tiên
+    if (numbers.isNotEmpty && learnedIndexes.isEmpty) {
+      _markLearned(0);
+    }
   }
 
   Future<void> _loadNumbers() async {
-    final String response = await rootBundle.loadString(
-      'assets/configs/numbers_100.json',
-    );
+    final String response = await rootBundle.loadString('assets/configs/numbers_100.json');
     final data = await json.decode(response);
-
     setState(() {
       numbers = data["numbers"];
     });
@@ -66,10 +68,8 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
   Future<void> _loadProgress() async {
     totalStars = await ProgressService.getStars(levelKey);
     learnedIndexes = await ProgressService.getLearnedIndexes(levelKey);
-
     final prefs = await SharedPreferences.getInstance();
     isFinalRewardShown = prefs.getBool("isFinalRewardShown_$levelKey") ?? false;
-
     setState(() {});
   }
 
@@ -81,9 +81,7 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
   Future<void> _setFinalRewardShown() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool("isFinalRewardShown_$levelKey", true);
-    setState(() {
-      isFinalRewardShown = true;
-    });
+    setState(() => isFinalRewardShown = true);
   }
 
   void _markLearned(int index) async {
@@ -93,17 +91,15 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
         totalStars += 1;
       });
       await _saveProgress();
-
       if (mounted) _miniConfettiController.play();
 
       // 🎯 Khi học xong tất cả
       if (totalStars == numbers.length && !isFinalRewardShown) {
         if (mounted) _confettiController.play();
 
-        // 🔓 Mở khóa level tiếp theo (Cộng ≤10)
         final levels = await ProgressService.loadLevels();
         final currentIdx = levels.indexWhere(
-          (lv) => lv.levelKey == levelKey || lv.route == "/learn_numbers_100",
+              (lv) => lv.levelKey == levelKey || lv.route == "/learn_numbers_100",
         );
         if (currentIdx != -1) {
           levels[currentIdx].state = LevelState.completed;
@@ -125,7 +121,7 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
       setState(() => currentIndex++);
       _markLearned(currentIndex);
       WidgetsBinding.instance.addPostFrameCallback(
-        (_) => WowCard.triggerAnimation(context),
+            (_) => WowCard.triggerAnimation(context),
       );
     }
   }
@@ -135,9 +131,31 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
       setState(() => currentIndex--);
       _markLearned(currentIndex);
       WidgetsBinding.instance.addPostFrameCallback(
-        (_) => WowCard.triggerAnimation(context),
+            (_) => WowCard.triggerAnimation(context),
       );
     }
+  }
+
+  // 🎲 Random học ngẫu nhiên
+  void _random() async {
+    if (numbers.isEmpty) return;
+
+    final random = Random();
+    int newIndex = currentIndex;
+    while (newIndex == currentIndex && numbers.length > 1) {
+      newIndex = random.nextInt(numbers.length);
+    }
+
+    // âm thanh click vui nhộn (nếu có)
+    try {
+      await _player.play(AssetSource("audio/random.mp3"));
+    } catch (_) {}
+
+    setState(() => currentIndex = newIndex);
+    _markLearned(currentIndex);
+    WidgetsBinding.instance.addPostFrameCallback(
+          (_) => WowCard.triggerAnimation(context),
+    );
   }
 
   Future<void> _playAudio(String path) async {
@@ -154,7 +172,6 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
       try {
         await _player.play(AssetSource("audio/victory.mp3"));
       } catch (_) {}
-
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -210,7 +227,6 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
           );
         },
       );
-
       Future.delayed(const Duration(seconds: 5), () {
         if (mounted && Navigator.canPop(context)) Navigator.pop(context);
       });
@@ -237,11 +253,7 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                   shadows: [
-                    Shadow(
-                      blurRadius: 10,
-                      color: Colors.black45,
-                      offset: Offset(2, 2),
-                    ),
+                    Shadow(blurRadius: 10, color: Colors.black45, offset: Offset(2, 2)),
                   ],
                 ),
                 textAlign: TextAlign.center,
@@ -251,7 +263,6 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
         );
       },
     );
-
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted && Navigator.canPop(context)) Navigator.pop(context);
     });
@@ -267,10 +278,9 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
     final size = MediaQuery.of(context).size;
 
     return BaseScreen(
-      title: "🌟 Số 51–100 🌟",
+      title: "🌟 Số 0–100 🌟",
       child: Stack(
         children: [
-          const AnimatedBackground(),
           SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.only(bottom: size.height * 0.25),
@@ -289,9 +299,7 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
                             value: (totalStars / numbers.length).clamp(0, 1),
                             minHeight: size.height * 0.04,
                             backgroundColor: Colors.grey[300],
-                            valueColor: const AlwaysStoppedAnimation(
-                              Colors.amber,
-                            ),
+                            valueColor: const AlwaysStoppedAnimation(Colors.amber),
                           ),
                         ),
                         Text(
@@ -320,10 +328,7 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
                     ),
                   ),
                   icon: Icon(Icons.volume_up, size: size.width * 0.07),
-                  label: Text(
-                    "Nghe",
-                    style: TextStyle(fontSize: size.width * 0.055),
-                  ),
+                  label: Text("Nghe", style: TextStyle(fontSize: size.width * 0.055)),
                   onPressed: () => _playAudio(item["audio"]),
                 ),
                 SizedBox(height: size.height * 0.04),
@@ -331,19 +336,10 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     if (currentIndex > 0)
-                      _circleButton(
-                        Icons.arrow_back,
-                        _prev,
-                        Colors.pinkAccent,
-                        size,
-                      ),
+                      _circleButton(Icons.arrow_back, _prev, Colors.pinkAccent, size),
+                    _circleButton(Icons.shuffle, _random, Colors.amber, size),
                     if (currentIndex < numbers.length - 1)
-                      _circleButton(
-                        Icons.arrow_forward,
-                        _next,
-                        Colors.lightBlue,
-                        size,
-                      ),
+                      _circleButton(Icons.arrow_forward, _next, Colors.lightBlue, size),
                   ],
                 ),
               ],
@@ -379,12 +375,7 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
     );
   }
 
-  Widget _circleButton(
-    IconData icon,
-    VoidCallback onTap,
-    Color color,
-    Size size,
-  ) {
+  Widget _circleButton(IconData icon, VoidCallback onTap, Color color, Size size) {
     return Ink(
       decoration: ShapeDecoration(shape: const CircleBorder(), color: color),
       child: IconButton(
@@ -398,111 +389,6 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
   void dispose() {
     _confettiController.dispose();
     _miniConfettiController.dispose();
-    super.dispose();
-  }
-}
-
-//
-// 🌥️ Animated Background
-//
-class AnimatedBackground extends StatefulWidget {
-  const AnimatedBackground({super.key});
-
-  @override
-  State<AnimatedBackground> createState() => _AnimatedBackgroundState();
-}
-
-class _AnimatedBackgroundState extends State<AnimatedBackground>
-    with TickerProviderStateMixin {
-  late AnimationController _cloudController;
-  late AnimationController _balloonController;
-  late AnimationController _starController;
-  final Random _random = Random();
-
-  @override
-  void initState() {
-    super.initState();
-    _cloudController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 30),
-    )..repeat();
-    _balloonController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 12),
-    )..repeat();
-    _starController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        AnimatedBuilder(
-          animation: _cloudController,
-          builder: (_, __) {
-            return Positioned(
-              top: 80,
-              left:
-                  MediaQuery.of(context).size.width *
-                  (_cloudController.value * 2 - 1),
-              child: Icon(
-                Icons.cloud,
-                size: 120,
-                color: Colors.white.withOpacity(0.8),
-              ),
-            );
-          },
-        ),
-        AnimatedBuilder(
-          animation: _balloonController,
-          builder: (_, __) {
-            return Positioned(
-              bottom:
-                  MediaQuery.of(context).size.height *
-                  (1 - _balloonController.value),
-              left: MediaQuery.of(context).size.width * 0.7,
-              child: Icon(
-                Icons.celebration,
-                size: 60,
-                color: Colors.pink.withOpacity(0.8),
-              ),
-            );
-          },
-        ),
-        ...List.generate(6, (i) {
-          final left = _random.nextDouble() * MediaQuery.of(context).size.width;
-          final top =
-              _random.nextDouble() * MediaQuery.of(context).size.height * 0.5;
-          return AnimatedBuilder(
-            animation: _starController,
-            builder: (_, __) {
-              return Positioned(
-                left: left,
-                top: top,
-                child: Opacity(
-                  opacity: _starController.value,
-                  child: Icon(
-                    Icons.star,
-                    size: 18,
-                    color: Colors.yellow.withOpacity(0.8),
-                  ),
-                ),
-              );
-            },
-          );
-        }),
-      ],
-    );
-  }
-
-  @override
-  void dispose() {
-    _cloudController.dispose();
-    _balloonController.dispose();
-    _starController.dispose();
     super.dispose();
   }
 }

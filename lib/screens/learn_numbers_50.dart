@@ -11,7 +11,6 @@ import '../models/level.dart';
 import '../services/progress_service.dart';
 import '../widgets/wow_card.dart';
 import 'base_screen.dart';
-import 'learn_numbers.dart';
 
 class LearnNumbers50Screen extends StatefulWidget {
   const LearnNumbers50Screen({super.key});
@@ -22,7 +21,7 @@ class LearnNumbers50Screen extends StatefulWidget {
 
 class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
     with TickerProviderStateMixin {
-  final String levelKey = "21_50"; // 🔹 định danh level này
+  final String levelKey = "0_50"; // 🔹 định danh level này
   List<dynamic> numbers = [];
   int currentIndex = 0;
   int totalStars = 0;
@@ -43,22 +42,25 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
   @override
   void initState() {
     super.initState();
-    _loadNumbers();
-    _loadProgress();
-    _confettiController = ConfettiController(
-      duration: const Duration(seconds: 3),
-    );
-    _miniConfettiController = ConfettiController(
-      duration: const Duration(seconds: 1),
-    );
+    _initData();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _miniConfettiController = ConfettiController(duration: const Duration(seconds: 1));
+  }
+
+  /// 🔹 Load dữ liệu và tự động cộng sao cho số đầu tiên nếu chưa có tiến trình
+  Future<void> _initData() async {
+    await _loadNumbers();
+    await _loadProgress();
+
+    // ✅ Khi mở lần đầu, đánh dấu học luôn số đầu tiên
+    if (numbers.isNotEmpty && learnedIndexes.isEmpty) {
+      _markLearned(0);
+    }
   }
 
   Future<void> _loadNumbers() async {
-    final String response = await rootBundle.loadString(
-      'assets/configs/numbers_50.json',
-    );
+    final String response = await rootBundle.loadString('assets/configs/numbers_50.json');
     final data = await json.decode(response);
-
     setState(() {
       numbers = data["numbers"];
     });
@@ -104,7 +106,7 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
         // 🔓 Mở khóa level tiếp theo (51–100)
         final levels = await ProgressService.loadLevels();
         final currentIdx = levels.indexWhere(
-          (lv) => lv.levelKey == levelKey || lv.route == "/learn_numbers_50",
+              (lv) => lv.levelKey == levelKey || lv.route == "/learn_numbers_50",
         );
         if (currentIdx != -1) {
           levels[currentIdx].state = LevelState.completed;
@@ -126,7 +128,7 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
       setState(() => currentIndex++);
       _markLearned(currentIndex);
       WidgetsBinding.instance.addPostFrameCallback(
-        (_) => WowCard.triggerAnimation(context),
+            (_) => WowCard.triggerAnimation(context),
       );
     }
   }
@@ -136,9 +138,33 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
       setState(() => currentIndex--);
       _markLearned(currentIndex);
       WidgetsBinding.instance.addPostFrameCallback(
-        (_) => WowCard.triggerAnimation(context),
+            (_) => WowCard.triggerAnimation(context),
       );
     }
+  }
+
+  // 🎲 Học ngẫu nhiên
+  void _random() async {
+    if (numbers.isEmpty) return;
+
+    final random = Random();
+    int newIndex = currentIndex;
+
+    while (newIndex == currentIndex && numbers.length > 1) {
+      newIndex = random.nextInt(numbers.length);
+    }
+
+    // âm thanh click vui nhộn (nếu có)
+    try {
+      await _player.play(AssetSource("audio/random.mp3"));
+    } catch (_) {}
+
+    setState(() => currentIndex = newIndex);
+    _markLearned(currentIndex);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WowCard.triggerAnimation(context);
+    });
   }
 
   Future<void> _playAudio(String path) async {
@@ -268,10 +294,9 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
     final size = MediaQuery.of(context).size;
 
     return BaseScreen(
-      title: "🌟 Số 21–50 🌟",
+      title: "🌟 Số 0–50 🌟",
       child: Stack(
         children: [
-          const AnimatedBackground(),
           SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.only(bottom: size.height * 0.25),
@@ -290,9 +315,7 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
                             value: (totalStars / numbers.length).clamp(0, 1),
                             minHeight: size.height * 0.04,
                             backgroundColor: Colors.grey[300],
-                            valueColor: const AlwaysStoppedAnimation(
-                              Colors.amber,
-                            ),
+                            valueColor: const AlwaysStoppedAnimation(Colors.amber),
                           ),
                         ),
                         Text(
@@ -321,10 +344,7 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
                     ),
                   ),
                   icon: Icon(Icons.volume_up, size: size.width * 0.07),
-                  label: Text(
-                    "Nghe",
-                    style: TextStyle(fontSize: size.width * 0.055),
-                  ),
+                  label: Text("Nghe", style: TextStyle(fontSize: size.width * 0.055)),
                   onPressed: () => _playAudio(item["audio"]),
                 ),
                 SizedBox(height: size.height * 0.04),
@@ -332,19 +352,10 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     if (currentIndex > 0)
-                      _circleButton(
-                        Icons.arrow_back,
-                        _prev,
-                        Colors.pinkAccent,
-                        size,
-                      ),
+                      _circleButton(Icons.arrow_back, _prev, Colors.pinkAccent, size),
+                    _circleButton(Icons.shuffle, _random, Colors.amber, size), // 🎲 Random
                     if (currentIndex < numbers.length - 1)
-                      _circleButton(
-                        Icons.arrow_forward,
-                        _next,
-                        Colors.lightBlue,
-                        size,
-                      ),
+                      _circleButton(Icons.arrow_forward, _next, Colors.lightBlue, size),
                   ],
                 ),
               ],
@@ -380,12 +391,7 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
     );
   }
 
-  Widget _circleButton(
-    IconData icon,
-    VoidCallback onTap,
-    Color color,
-    Size size,
-  ) {
+  Widget _circleButton(IconData icon, VoidCallback onTap, Color color, Size size) {
     return Ink(
       decoration: ShapeDecoration(shape: const CircleBorder(), color: color),
       child: IconButton(

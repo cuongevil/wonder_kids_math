@@ -29,8 +29,8 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
   bool isFinalRewardShown = false;
 
   final AudioPlayer _player = AudioPlayer();
-  late ConfettiController _confettiController; // 🎉 confetti lớn
-  late ConfettiController _miniConfettiController; // 🎊 confetti nhỏ
+  late ConfettiController _confettiController;
+  late ConfettiController _miniConfettiController;
 
   final List<IconData> rewardIcons = [
     Icons.star,
@@ -42,8 +42,7 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
   @override
   void initState() {
     super.initState();
-    _loadNumbers();
-    _loadProgress();
+    _initData(); // ✅ load và đánh dấu sao đầu tiên
     _confettiController = ConfettiController(
       duration: const Duration(seconds: 3),
     );
@@ -52,12 +51,21 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
     );
   }
 
+  Future<void> _initData() async {
+    await _loadNumbers();
+    await _loadProgress();
+
+    // ✅ Nếu chưa học số nào, tự động cộng sao đầu tiên
+    if (numbers.isNotEmpty && learnedIndexes.isEmpty) {
+      _markLearned(0);
+    }
+  }
+
   Future<void> _loadNumbers() async {
     final String response = await rootBundle.loadString(
       'assets/configs/numbers.json',
     );
     final data = await json.decode(response);
-
     setState(() {
       numbers = data["numbers"];
     });
@@ -66,11 +74,8 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
   Future<void> _loadProgress() async {
     totalStars = await ProgressService.getStars(levelKey);
     learnedIndexes = await ProgressService.getLearnedIndexes(levelKey);
-
-    // lấy flag final reward
     final prefs = await SharedPreferences.getInstance();
     isFinalRewardShown = prefs.getBool("isFinalRewardShown_$levelKey") ?? false;
-
     setState(() {});
   }
 
@@ -82,18 +87,7 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
   Future<void> _setFinalRewardShown() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool("isFinalRewardShown_$levelKey", true);
-    setState(() {
-      isFinalRewardShown = true;
-    });
-  }
-
-  // ✅ Reset flag để chơi lại
-  Future<void> _resetFinalRewardFlag() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool("isFinalRewardShown_$levelKey", false);
-    setState(() {
-      isFinalRewardShown = false;
-    });
+    setState(() => isFinalRewardShown = true);
   }
 
   void _markLearned(int index) async {
@@ -104,21 +98,14 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
       });
       await _saveProgress();
 
-      // 🎊 bắn confetti nhỏ khi học xong 1 số
-      if (mounted) {
-        _miniConfettiController.play();
-      }
+      _miniConfettiController.play();
 
-      // 🎯 Khi học xong tất cả và chưa hiện popup trước đó
+      // 🎯 Khi học xong tất cả
       if (totalStars == numbers.length && !isFinalRewardShown) {
-        if (mounted) {
-          _confettiController.play();
-        }
-
-        // 🔹 Mở khóa level tiếp theo TRƯỚC
+        _confettiController.play();
         final levels = await ProgressService.loadLevels();
         final currentIdx = levels.indexWhere(
-              (lv) => lv.levelKey == levelKey || lv.route == "/learn_numbers",
+          (lv) => lv.levelKey == levelKey || lv.route == "/learn_numbers",
         );
         if (currentIdx != -1) {
           levels[currentIdx].state = LevelState.completed;
@@ -128,8 +115,6 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
           }
           await ProgressService.saveLevels(levels);
         }
-
-        // 🔹 Cập nhật flag và show popup
         await _setFinalRewardShown();
         _showRewardPopup(isFinal: true);
       }
@@ -138,26 +123,45 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
 
   void _next() {
     if (currentIndex < numbers.length - 1) {
-      setState(() {
-        currentIndex++;
-      });
+      setState(() => currentIndex++);
       _markLearned(currentIndex);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        WowCard.triggerAnimation(context);
-      });
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => WowCard.triggerAnimation(context),
+      );
     }
   }
 
   void _prev() {
     if (currentIndex > 0) {
-      setState(() {
-        currentIndex--;
-      });
+      setState(() => currentIndex--);
       _markLearned(currentIndex);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        WowCard.triggerAnimation(context);
-      });
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => WowCard.triggerAnimation(context),
+      );
     }
+  }
+
+  // 🎲 Học ngẫu nhiên
+  void _random() async {
+    if (numbers.isEmpty) return;
+
+    final random = Random();
+    int newIndex = currentIndex;
+
+    while (newIndex == currentIndex && numbers.length > 1) {
+      newIndex = random.nextInt(numbers.length);
+    }
+
+    try {
+      await _player.play(AssetSource("audio/random.mp3"));
+    } catch (_) {}
+
+    setState(() => currentIndex = newIndex);
+    _markLearned(currentIndex);
+
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => WowCard.triggerAnimation(context),
+    );
   }
 
   Future<void> _playAudio(String path) async {
@@ -237,7 +241,7 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
       return;
     }
 
-    // Popup thường
+    // 🎁 Popup thường
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -290,13 +294,11 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
       title: "🌟 Số 0–10 🌟",
       child: Stack(
         children: [
-          const AnimatedBackground(),
           SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.only(bottom: size.height * 0.25),
             child: Column(
               children: [
-                // ⭐ progress bar
                 Padding(
                   padding: EdgeInsets.symmetric(vertical: size.height * 0.015),
                   child: SizedBox(
@@ -327,12 +329,8 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
                     ),
                   ),
                 ),
-
-                // 📌 WowCard
                 WowCard(imagePath: item["image"], text: item["text"]),
-
                 SizedBox(height: size.height * 0.04),
-
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orangeAccent,
@@ -351,9 +349,7 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
                   ),
                   onPressed: () => _playAudio(item["audio"]),
                 ),
-
                 SizedBox(height: size.height * 0.04),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -364,6 +360,7 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
                         Colors.pinkAccent,
                         size,
                       ),
+                    _circleButton(Icons.shuffle, _random, Colors.amber, size),
                     if (currentIndex < numbers.length - 1)
                       _circleButton(
                         Icons.arrow_forward,
@@ -376,12 +373,9 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
               ],
             ),
           ),
-
-          // 🎉 Confetti lớn khi hoàn thành
           ConfettiWidget(
             confettiController: _confettiController,
             blastDirectionality: BlastDirectionality.explosive,
-            shouldLoop: false,
             colors: const [
               Colors.red,
               Colors.blue,
@@ -391,8 +385,6 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
             ],
             gravity: 0.3,
           ),
-
-          // 🎊 Confetti nhỏ khi học từng số
           Align(
             alignment: Alignment.center,
             child: ConfettiWidget(
@@ -412,11 +404,11 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
   }
 
   Widget _circleButton(
-      IconData icon,
-      VoidCallback onTap,
-      Color color,
-      Size size,
-      ) {
+    IconData icon,
+    VoidCallback onTap,
+    Color color,
+    Size size,
+  ) {
     return Ink(
       decoration: ShapeDecoration(shape: const CircleBorder(), color: color),
       child: IconButton(
@@ -430,110 +422,6 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
   void dispose() {
     _confettiController.dispose();
     _miniConfettiController.dispose();
-    super.dispose();
-  }
-}
-
-//
-// 🌥️ Animated Background
-//
-class AnimatedBackground extends StatefulWidget {
-  const AnimatedBackground({super.key});
-
-  @override
-  State<AnimatedBackground> createState() => _AnimatedBackgroundState();
-}
-
-class _AnimatedBackgroundState extends State<AnimatedBackground>
-    with TickerProviderStateMixin {
-  late AnimationController _cloudController;
-  late AnimationController _balloonController;
-  late AnimationController _starController;
-  final Random _random = Random();
-
-  @override
-  void initState() {
-    super.initState();
-    _cloudController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 30),
-    )..repeat();
-    _balloonController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 12),
-    )..repeat();
-    _starController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        AnimatedBuilder(
-          animation: _cloudController,
-          builder: (_, __) {
-            return Positioned(
-              top: 80,
-              left: MediaQuery.of(context).size.width *
-                  (_cloudController.value * 2 - 1),
-              child: Icon(
-                Icons.cloud,
-                size: 120,
-                color: Colors.white.withOpacity(0.8),
-              ),
-            );
-          },
-        ),
-        AnimatedBuilder(
-          animation: _balloonController,
-          builder: (_, __) {
-            return Positioned(
-              bottom: MediaQuery.of(context).size.height *
-                  (1 - _balloonController.value),
-              left: MediaQuery.of(context).size.width * 0.7,
-              child: Icon(
-                Icons.celebration,
-                size: 60,
-                color: Colors.pink.withOpacity(0.8),
-              ),
-            );
-          },
-        ),
-        ...List.generate(6, (i) {
-          final left =
-              _random.nextDouble() * MediaQuery.of(context).size.width;
-          final top =
-              _random.nextDouble() * MediaQuery.of(context).size.height * 0.5;
-          return AnimatedBuilder(
-            animation: _starController,
-            builder: (_, __) {
-              return Positioned(
-                left: left,
-                top: top,
-                child: Opacity(
-                  opacity: _starController.value,
-                  child: Icon(
-                    Icons.star,
-                    size: 18,
-                    color: Colors.yellow.withOpacity(0.8),
-                  ),
-                ),
-              );
-            },
-          );
-        }),
-      ],
-    );
-  }
-
-  @override
-  void dispose() {
-    _cloudController.dispose();
-    _balloonController.dispose();
-    _starController.dispose();
     super.dispose();
   }
 }
