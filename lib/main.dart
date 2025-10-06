@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:wonder_kids_math/screens/badge_collection_screen.dart';
+import 'package:wonder_kids_math/screens/game_addition100.dart';
+import 'package:wonder_kids_math/screens/game_addition50.dart';
+import 'package:wonder_kids_math/screens/game_subtraction100.dart';
+import 'package:wonder_kids_math/screens/game_subtraction50.dart';
 import 'package:wonder_kids_math/screens/leaderboard_screen.dart';
 import 'package:wonder_kids_math/screens/learn_numbers_100.dart';
 import 'package:wonder_kids_math/screens/learn_numbers_50.dart';
@@ -39,11 +43,15 @@ class WonderKidsMathApp extends StatelessWidget {
         '/learn_numbers_20': (_) => const LearnNumbers20Screen(),
         '/learn_numbers_50': (_) => const LearnNumbers50Screen(),
         '/learn_numbers_100': (_) => const LearnNumbers100Screen(),
+        '/game_compare': (_) => const GameCompareScreen(),
         '/game_addition10': (_) => const GameAddition10Screen(),
         '/game_subtraction10': (_) => const GameSubtraction10Screen(),
-        '/game_compare': (_) => const GameCompareScreen(),
         '/game_addition20': (_) => const GameAddition20Screen(),
         '/game_subtraction20': (_) => const GameSubtraction20Screen(),
+        '/game_addition50': (_) => const GameAddition50Screen(),
+        '/game_subtraction50': (_) => const GameSubtraction50Screen(),
+        '/game_addition100': (_) => const GameAddition100Screen(),
+        '/game_subtraction100': (_) => const GameSubtraction100Screen(),
         '/game_shapes': (_) => const GameShapesScreen(),
         '/game_measure_time': (_) => const GameMeasureTimeScreen(),
         '/game_final_boss': (_) => const GameFinalBossScreen(),

@@ -8,22 +8,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/wow_mascot.dart';
 import 'base_screen.dart';
 
-class GameSubtraction10Screen extends StatefulWidget {
-  const GameSubtraction10Screen({super.key});
+class GameAddition50Screen extends StatefulWidget {
+  const GameAddition50Screen({super.key});
 
   @override
-  State<GameSubtraction10Screen> createState() =>
-      _GameSubtraction10ScreenState();
+  State<GameAddition50Screen> createState() => _GameAddition50ScreenState();
 }
 
-class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
+class _GameAddition50ScreenState extends State<GameAddition50Screen>
     with TickerProviderStateMixin {
   final _rand = Random();
   final AudioPlayer _player = AudioPlayer();
   late SharedPreferences _prefs;
 
-  static const String progressKey = "game_subtraction10_progress";
-  static const String completedKey = "game_subtraction10_completed";
+  static const String progressKey = "game_addition50_progress";
+  static const String completedKey = "game_addition50_completed";
 
   late int a;
   late int b;
@@ -68,10 +67,7 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
     correctCount = _prefs.getInt(progressKey) ?? 0;
     isCompleted = _prefs.getBool(completedKey) ?? false;
 
-    if (isCompleted) {
-      isReviewMode = true;
-    }
-
+    if (isCompleted) isReviewMode = true;
     _newQuestion();
     setState(() => isLoading = false);
   }
@@ -89,13 +85,20 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
   }
 
   void _newQuestion() {
-    a = _rand.nextInt(10) + 1; // 1–10
-    b = _rand.nextInt(a + 1); // đảm bảo b <= a
-    answer = a - b;
+    // ✅ sinh phép cộng ngẫu nhiên trong khoảng ≤50
+    a = _rand.nextInt(51);
+    b = _rand.nextInt(51);
+    answer = a + b;
+
+    // đảm bảo không vượt 50
+    if (answer > 50) {
+      _newQuestion();
+      return;
+    }
 
     options = [answer];
     while (options.length < 3) {
-      int fake = _rand.nextInt(10);
+      int fake = _rand.nextInt(51); // 0–50
       if (!options.contains(fake)) options.add(fake);
     }
     options.shuffle();
@@ -108,8 +111,7 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
     if (correct) {
       isMascotHappy = true;
       _confettiController.play();
-      final voice = praiseVoices[_rand.nextInt(praiseVoices.length)];
-      await _play(voice);
+      await _play(praiseVoices[_rand.nextInt(praiseVoices.length)]);
 
       if (!isReviewMode) {
         correctCount++;
@@ -172,7 +174,7 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
                 next();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.pinkAccent,
+                backgroundColor: Colors.lightBlueAccent,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -208,7 +210,7 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
             style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
           ),
           content: const Text(
-            "Bé đã hoàn thành 10 phép trừ! 🌟",
+            "Bé đã hoàn thành 10 phép cộng ≤50! 🌟",
             textAlign: TextAlign.center,
           ),
           actionsAlignment: MainAxisAlignment.center,
@@ -249,7 +251,7 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
     if (isLoading) {
       return const Scaffold(
         body: Center(
-          child: CircularProgressIndicator(color: Colors.pinkAccent),
+          child: CircularProgressIndicator(color: Colors.lightBlueAccent),
         ),
       );
     }
@@ -257,14 +259,15 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
     final width = MediaQuery.of(context).size.width;
 
     return BaseScreen(
-      title: "Phép trừ ≤10",
+      title: "Phép cộng ≤50",
       child: Stack(
         alignment: Alignment.center,
         children: [
+          // 🌈 Nền gradient
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xffffd6f0), Color(0xffc8e4ff)],
+                colors: [Color(0xffc9f1ff), Color(0xffe6d6ff)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -277,10 +280,10 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
               blastDirectionality: BlastDirectionality.explosive,
               numberOfParticles: 30,
               colors: const [
-                Colors.pink,
-                Colors.yellow,
-                Colors.purple,
-                Colors.lightBlue,
+                Colors.lightBlueAccent,
+                Colors.amber,
+                Colors.pinkAccent,
+                Colors.purpleAccent,
               ],
             ),
           ),
@@ -293,7 +296,7 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                "$a – $b = ?",
+                "$a + $b = ?",
                 style: const TextStyle(
                   fontSize: 48,
                   fontWeight: FontWeight.w900,
@@ -309,7 +312,7 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
                     .map(
                       (opt) => ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurpleAccent,
+                          backgroundColor: Colors.lightBlueAccent,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 32,
                             vertical: 18,

@@ -118,15 +118,23 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         return 51;
       case "0_100":
         return 101;
+      case "compare":
+        return 10;
       case "addition10":
         return 10;
       case "subtraction10":
         return 10;
-      case "compare":
-        return 8;
       case "addition20":
         return 10;
       case "subtraction20":
+        return 10;
+      case "addition50":
+        return 10;
+      case "subtraction50":
+        return 10;
+      case "addition100":
+        return 10;
+      case "subtraction100":
         return 10;
       case "shapes":
         return 12;
@@ -182,6 +190,14 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       ),
       Level(
         index: 5,
+        title: 'So Sánh',
+        type: LevelType.topic,
+        state: LevelState.locked,
+        route: '/game_compare',
+        levelKey: "compare",
+      ),
+      Level(
+        index: 6,
         title: 'Cộng ≤10',
         type: LevelType.topic,
         state: LevelState.locked,
@@ -189,20 +205,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         levelKey: "addition10",
       ),
       Level(
-        index: 6,
+        index: 7,
         title: 'Trừ ≤10',
         type: LevelType.topic,
         state: LevelState.locked,
         route: '/game_subtraction10',
         levelKey: "subtraction10",
-      ),
-      Level(
-        index: 7,
-        title: 'So Sánh',
-        type: LevelType.topic,
-        state: LevelState.locked,
-        route: '/game_compare',
-        levelKey: "compare",
       ),
       Level(
         index: 8,
@@ -222,6 +230,38 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       ),
       Level(
         index: 10,
+        title: 'Cộng ≤50',
+        type: LevelType.topic,
+        state: LevelState.locked,
+        route: '/game_addition50',
+        levelKey: "addition50",
+      ),
+      Level(
+        index: 11,
+        title: 'Trừ ≤50',
+        type: LevelType.topic,
+        state: LevelState.locked,
+        route: '/game_subtraction50',
+        levelKey: "subtraction50",
+      ),
+      Level(
+        index: 12,
+        title: 'Cộng ≤100',
+        type: LevelType.topic,
+        state: LevelState.locked,
+        route: '/game_addition100',
+        levelKey: "addition100",
+      ),
+      Level(
+        index: 13,
+        title: 'Trừ ≤100',
+        type: LevelType.topic,
+        state: LevelState.locked,
+        route: '/game_subtraction100',
+        levelKey: "subtraction100",
+      ),
+      Level(
+        index: 14,
         title: 'Hình Học',
         type: LevelType.topic,
         state: LevelState.locked,
@@ -229,7 +269,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         levelKey: "shapes",
       ),
       Level(
-        index: 11,
+        index: 15,
         title: 'Đo Lường',
         type: LevelType.topic,
         state: LevelState.locked,
@@ -237,7 +277,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         levelKey: "measure",
       ),
       Level(
-        index: 12,
+        index: 16,
         title: 'Tổng hợp',
         type: LevelType.boss,
         state: LevelState.locked,
@@ -245,7 +285,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         levelKey: "final_boss",
       ),
       Level(
-        index: 13,
+        index: 17,
         title: 'Kết thúc',
         type: LevelType.end,
         state: LevelState.locked,

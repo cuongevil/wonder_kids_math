@@ -1,5 +1,4 @@
 import 'dart:math';
-
 import 'package:audioplayers/audioplayers.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
@@ -8,22 +7,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/wow_mascot.dart';
 import 'base_screen.dart';
 
-class GameSubtraction10Screen extends StatefulWidget {
-  const GameSubtraction10Screen({super.key});
+class GameSubtraction100Screen extends StatefulWidget {
+  const GameSubtraction100Screen({super.key});
 
   @override
-  State<GameSubtraction10Screen> createState() =>
-      _GameSubtraction10ScreenState();
+  State<GameSubtraction100Screen> createState() =>
+      _GameSubtraction100ScreenState();
 }
 
-class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
+class _GameSubtraction100ScreenState extends State<GameSubtraction100Screen>
     with TickerProviderStateMixin {
   final _rand = Random();
   final AudioPlayer _player = AudioPlayer();
   late SharedPreferences _prefs;
 
-  static const String progressKey = "game_subtraction10_progress";
-  static const String completedKey = "game_subtraction10_completed";
+  static const String progressKey = "game_subtraction100_progress";
+  static const String completedKey = "game_subtraction100_completed";
 
   late int a;
   late int b;
@@ -51,9 +50,8 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(
-      duration: const Duration(seconds: 1),
-    );
+    _confettiController =
+        ConfettiController(duration: const Duration(seconds: 1));
     _popupController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -68,10 +66,7 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
     correctCount = _prefs.getInt(progressKey) ?? 0;
     isCompleted = _prefs.getBool(completedKey) ?? false;
 
-    if (isCompleted) {
-      isReviewMode = true;
-    }
-
+    if (isCompleted) isReviewMode = true;
     _newQuestion();
     setState(() => isLoading = false);
   }
@@ -89,13 +84,13 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
   }
 
   void _newQuestion() {
-    a = _rand.nextInt(10) + 1; // 1–10
-    b = _rand.nextInt(a + 1); // đảm bảo b <= a
+    a = _rand.nextInt(101);
+    b = _rand.nextInt(a + 1);
     answer = a - b;
 
     options = [answer];
     while (options.length < 3) {
-      int fake = _rand.nextInt(10);
+      int fake = _rand.nextInt(101); // 0–100
       if (!options.contains(fake)) options.add(fake);
     }
     options.shuffle();
@@ -108,8 +103,7 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
     if (correct) {
       isMascotHappy = true;
       _confettiController.play();
-      final voice = praiseVoices[_rand.nextInt(praiseVoices.length)];
-      await _play(voice);
+      await _play(praiseVoices[_rand.nextInt(praiseVoices.length)]);
 
       if (!isReviewMode) {
         correctCount++;
@@ -172,7 +166,7 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
                 next();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.pinkAccent,
+                backgroundColor: Colors.deepOrangeAccent,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -208,7 +202,7 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
             style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
           ),
           content: const Text(
-            "Bé đã hoàn thành 10 phép trừ! 🌟",
+            "Bé đã hoàn thành 10 phép trừ ≤100! 🌟",
             textAlign: TextAlign.center,
           ),
           actionsAlignment: MainAxisAlignment.center,
@@ -249,7 +243,7 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
     if (isLoading) {
       return const Scaffold(
         body: Center(
-          child: CircularProgressIndicator(color: Colors.pinkAccent),
+          child: CircularProgressIndicator(color: Colors.deepOrangeAccent),
         ),
       );
     }
@@ -257,14 +251,14 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
     final width = MediaQuery.of(context).size.width;
 
     return BaseScreen(
-      title: "Phép trừ ≤10",
+      title: "Phép trừ ≤100",
       child: Stack(
         alignment: Alignment.center,
         children: [
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xffffd6f0), Color(0xffc8e4ff)],
+                colors: [Color(0xffffe5d0), Color(0xffd0e5ff)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -277,10 +271,10 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
               blastDirectionality: BlastDirectionality.explosive,
               numberOfParticles: 30,
               colors: const [
-                Colors.pink,
+                Colors.orange,
                 Colors.yellow,
-                Colors.purple,
-                Colors.lightBlue,
+                Colors.pink,
+                Colors.blueAccent,
               ],
             ),
           ),
@@ -308,28 +302,28 @@ class _GameSubtraction10ScreenState extends State<GameSubtraction10Screen>
                 children: options
                     .map(
                       (opt) => ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurpleAccent,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 32,
-                            vertical: 18,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          elevation: 8,
-                        ),
-                        onPressed: () => _check(opt),
-                        child: Text(
-                          "$opt",
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepOrangeAccent,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 18,
                       ),
-                    )
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      elevation: 8,
+                    ),
+                    onPressed: () => _check(opt),
+                    child: Text(
+                      "$opt",
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                )
                     .toList(),
               ),
               const SizedBox(height: 40),

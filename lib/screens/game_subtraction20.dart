@@ -1,8 +1,12 @@
 import 'dart:math';
 
+import 'package:audioplayers/audioplayers.dart';
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import 'base_screen.dart'; // ✅ dùng BaseScreen
+import '../widgets/wow_mascot.dart';
+import 'base_screen.dart';
 
 class GameSubtraction20Screen extends StatefulWidget {
   const GameSubtraction20Screen({super.key});
@@ -12,17 +16,73 @@ class GameSubtraction20Screen extends StatefulWidget {
       _GameSubtraction20ScreenState();
 }
 
-class _GameSubtraction20ScreenState extends State<GameSubtraction20Screen> {
+class _GameSubtraction20ScreenState extends State<GameSubtraction20Screen>
+    with TickerProviderStateMixin {
   final _rand = Random();
+  final AudioPlayer _player = AudioPlayer();
+  late SharedPreferences _prefs;
+
+  static const String progressKey = "game_subtraction20_progress";
+  static const String completedKey = "game_subtraction20_completed";
+
   late int a;
   late int b;
   late int answer;
   late List<int> options;
 
+  int correctCount = 0;
+  bool isCompleted = false;
+  bool isReviewMode = false;
+  bool isMascotHappy = true;
+  bool isLoading = true;
+
+  late ConfettiController _confettiController;
+  late AnimationController _popupController;
+
+  final List<String> praiseVoices = ["correct1", "correct2", "correct3"];
+  final List<String> praiseTexts = [
+    "Giỏi quá bé ơi! 🌟",
+    "Tuyệt vời! 💪",
+    "Siêu đỉnh luôn! 🦸",
+    "Bé thông minh quá! 🧠",
+    "Yeah! Chính xác rồi 🎉",
+  ];
+
   @override
   void initState() {
     super.initState();
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 1),
+    );
+    _popupController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+      lowerBound: 0.7,
+      upperBound: 1.0,
+    );
+    _initProgress();
+  }
+
+  Future<void> _initProgress() async {
+    _prefs = await SharedPreferences.getInstance();
+    correctCount = _prefs.getInt(progressKey) ?? 0;
+    isCompleted = _prefs.getBool(completedKey) ?? false;
+
+    if (isCompleted) isReviewMode = true;
     _newQuestion();
+    setState(() => isLoading = false);
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    _popupController.dispose();
+    _player.dispose();
+    super.dispose();
+  }
+
+  Future<void> _play(String name) async {
+    await _player.play(AssetSource('audios/$name.mp3'));
   }
 
   void _newQuestion() {
@@ -39,78 +99,275 @@ class _GameSubtraction20ScreenState extends State<GameSubtraction20Screen> {
     setState(() {});
   }
 
-  void _check(int value) {
+  Future<void> _check(int value) async {
     final correct = value == answer;
+
+    if (correct) {
+      isMascotHappy = true;
+      _confettiController.play();
+      await _play(praiseVoices[_rand.nextInt(praiseVoices.length)]);
+
+      if (!isReviewMode) {
+        correctCount++;
+        await _prefs.setInt(progressKey, correctCount);
+
+        if (correctCount >= 10 && !isCompleted) {
+          isCompleted = true;
+          await _prefs.setBool(completedKey, true);
+          await Future.delayed(const Duration(milliseconds: 600));
+          _showRewardDialog();
+          return;
+        }
+      }
+
+      _popupController.forward(from: 0.7);
+      _showDialog(
+        title: "🎉 Chính xác!",
+        content: praiseTexts[_rand.nextInt(praiseTexts.length)],
+        next: _newQuestion,
+      );
+    } else {
+      isMascotHappy = false;
+      await _play('wrong');
+      _showDialog(
+        title: "❌ Sai rồi",
+        content: "Đáp án đúng là $answer",
+        next: _newQuestion,
+      );
+    }
+  }
+
+  void _showDialog({
+    required String title,
+    required String content,
+    required VoidCallback next,
+  }) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(correct ? "🎉 Chính xác!" : "❌ Sai rồi"),
-        content: Text(correct ? "Tốt lắm!" : "Đáp án đúng là $answer"),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              if (correct) {
-                Navigator.pop(context, true); // báo hoàn thành
-              } else {
-                _newQuestion();
-              }
-            },
-            child: const Text("OK"),
+      builder: (_) => ScaleTransition(
+        scale: CurvedAnimation(
+          parent: _popupController,
+          curve: Curves.elasticOut,
+        ),
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-        ],
+          title: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: Text(content, textAlign: TextAlign.center),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                next();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.pinkAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: const Text("Tiếp tục ➡️"),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return BaseScreen(
-      title: "Phép trừ ≤20",
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              "$a – $b = ?",
-              style: const TextStyle(
-                fontSize: 44,
-                fontWeight: FontWeight.bold,
-                color: Colors.deepPurple,
+  void _showRewardDialog() async {
+    await _play("victory");
+    _confettiController.play();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => ScaleTransition(
+        scale: CurvedAnimation(
+          parent: _popupController,
+          curve: Curves.easeOutBack,
+        ),
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            "🏆 Giỏi quá!",
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+          ),
+          content: const Text(
+            "Bé đã hoàn thành 10 phép trừ ≤20! 🌟",
+            textAlign: TextAlign.center,
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pop(context, true);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
-            ),
-            const SizedBox(height: 30),
-            Wrap(
-              spacing: 18,
-              runSpacing: 14,
-              children: options
-                  .map(
-                    (opt) => ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 28,
-                          vertical: 18,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        backgroundColor: Colors.orangeAccent,
-                        foregroundColor: Colors.white,
-                      ),
-                      onPressed: () => _check(opt),
-                      child: Text(
-                        "$opt",
-                        style: const TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
+              child: const Text("Hoàn thành 🌟"),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _resetProgress() async {
+    await _prefs.remove(progressKey);
+    await _prefs.remove(completedKey);
+    setState(() {
+      correctCount = 0;
+      isCompleted = false;
+      isReviewMode = false;
+    });
+    Navigator.pop(context);
+    _newQuestion();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: Colors.pinkAccent),
+        ),
+      );
+    }
+
+    final width = MediaQuery.of(context).size.width;
+
+    return BaseScreen(
+      title: "Phép trừ ≤20",
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xffffe5d0), Color(0xffd0e5ff)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              numberOfParticles: 30,
+              colors: const [
+                Colors.orange,
+                Colors.yellow,
+                Colors.pink,
+                Colors.blueAccent,
+              ],
+            ),
+          ),
+          Positioned(
+            bottom: 100,
+            right: 24,
+            child: WowMascot(isHappy: isMascotHappy),
+          ),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                "$a – $b = ?",
+                style: const TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.deepPurple,
+                  shadows: [Shadow(offset: Offset(2, 2), color: Colors.white)],
+                ),
+              ),
+              const SizedBox(height: 30),
+              Wrap(
+                spacing: 20,
+                runSpacing: 16,
+                children: options
+                    .map(
+                      (opt) => ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.deepOrangeAccent,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 18,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          elevation: 8,
+                        ),
+                        onPressed: () => _check(opt),
+                        child: Text(
+                          "$opt",
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: 40),
+              if (!isReviewMode) ...[
+                Container(
+                  width: width * 0.6,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: AnimatedFractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    duration: const Duration(milliseconds: 400),
+                    widthFactor: correctCount / 10,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.amber,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Tiến độ: $correctCount / 10",
+                  style: const TextStyle(
+                    color: Colors.deepPurple,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ] else
+                const Text(
+                  "Chế độ ôn luyện 🌈",
+                  style: TextStyle(
+                    color: Colors.pinkAccent,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }

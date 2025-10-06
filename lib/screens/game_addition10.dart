@@ -87,8 +87,8 @@ class _GameAddition10ScreenState extends State<GameAddition10Screen>
   }
 
   void _newQuestion() {
-    a = _rand.nextInt(6) + 1;
-    b = _rand.nextInt(6) + 1;
+    a = _rand.nextInt(11);
+    b = _rand.nextInt(11);
     answer = a + b;
 
     if (answer > 10) {
