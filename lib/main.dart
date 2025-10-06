@@ -21,6 +21,7 @@ import 'screens/learn_numbers.dart';
 import 'screens/learn_numbers_20.dart';
 import 'screens/level_detail.dart';
 import 'screens/map_screen.dart';
+import 'utils/route_observer.dart';
 
 void main() => runApp(const WonderKidsMathApp());
 
@@ -31,6 +32,7 @@ class WonderKidsMathApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Wonder Kids Học Toán',
+      navigatorObservers: [appRouteObserver],
       theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.deepPurple),
       initialRoute: '/',
       routes: {

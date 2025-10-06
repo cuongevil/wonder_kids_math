@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../models/level.dart';
 import '../services/progress_service.dart';
+import '../utils/route_observer.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/level_node.dart';
 import '../widgets/map_background.dart';
@@ -17,7 +18,8 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
+class _MapScreenState extends State<MapScreen>
+    with TickerProviderStateMixin, RouteAware {
   List<Level> levels = [];
   late ConfettiController _confettiController;
   late ScrollController _scrollController;
@@ -40,11 +42,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       upperBound: 1.05,
     );
 
-    // 🔹 chỉ gọi repeat khi widget còn mounted
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _bounceController.repeat(reverse: true);
-      }
+      if (mounted) _bounceController.repeat(reverse: true);
     });
 
     _init();
@@ -55,23 +54,32 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    appRouteObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
   void dispose() {
-    // 🔹 dừng trước khi dispose
+    appRouteObserver.unsubscribe(this);
     _bounceController.stop();
     _confettiController.stop();
-
     _scrollController.dispose();
     _bounceController.dispose();
     _confettiController.dispose();
-
     super.dispose();
   }
 
-  /// 🔹 Khởi tạo dữ liệu level
+  /// ✅ Khi quay lại từ màn hình khác
+  @override
+  void didPopNext() {
+    _refreshLevels();
+  }
+
+  /// Khởi tạo dữ liệu ban đầu
   Future<void> _init() async {
     levels = await ProgressService.ensureDefaultLevels(_defaultLevels);
 
-    // load stars/total cho từng level
     for (var lv in levels) {
       if (lv.levelKey != null) {
         lv.stars = await ProgressService.getStars(lv.levelKey!);
@@ -79,7 +87,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       }
     }
 
-    // 🔹 tìm index playable đầu tiên
+    // Tìm level playable đầu tiên để focus
     final firstPlayableIndex = levels.indexWhere(
       (e) => e.state == LevelState.playable,
     );
@@ -92,13 +100,11 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           final screenH = MediaQuery.of(context).size.height;
           final topPadding =
               kToolbarHeight + MediaQuery.of(context).padding.top + 16;
-
           final targetOffset =
               firstPlayableIndex * spacing -
               screenH / 2 +
               spacing / 2 +
               topPadding;
-
           _scrollController.jumpTo(
             targetOffset.clamp(0, _scrollController.position.maxScrollExtent),
           );
@@ -107,7 +113,19 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     }
   }
 
-  /// 🔹 Tổng số bài trong level theo key
+  /// ✅ Làm mới level khi quay lại map
+  Future<void> _refreshLevels() async {
+    levels = await ProgressService.ensureDefaultLevels(_defaultLevels);
+    for (var lv in levels) {
+      if (lv.levelKey != null) {
+        lv.stars = await ProgressService.getStars(lv.levelKey!);
+        lv.total = await _getTotalForLevel(lv.levelKey!);
+      }
+    }
+    if (mounted) setState(() {});
+  }
+
+  /// Tổng số bài trong từng level
   Future<int> _getTotalForLevel(String key) async {
     switch (key) {
       case "0_10":
@@ -147,7 +165,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     }
   }
 
-  /// 🔹 Danh sách level mặc định
+  /// Danh sách level mặc định
   List<Level> _defaultLevels() {
     return [
       Level(
@@ -160,7 +178,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         index: 1,
         title: 'Số 0–10',
         type: LevelType.topic,
-        state: LevelState.locked,
         route: '/learn_numbers',
         levelKey: "0_10",
       ),
@@ -168,7 +185,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         index: 2,
         title: 'Số 0–20',
         type: LevelType.topic,
-        state: LevelState.locked,
         route: '/learn_numbers_20',
         levelKey: "0_20",
       ),
@@ -176,7 +192,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         index: 3,
         title: 'Số 0–50',
         type: LevelType.topic,
-        state: LevelState.locked,
         route: '/learn_numbers_50',
         levelKey: "0_50",
       ),
@@ -184,7 +199,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         index: 4,
         title: 'Số 0–100',
         type: LevelType.topic,
-        state: LevelState.locked,
         route: '/learn_numbers_100',
         levelKey: "0_100",
       ),
@@ -192,7 +206,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         index: 5,
         title: 'So Sánh',
         type: LevelType.topic,
-        state: LevelState.locked,
         route: '/game_compare',
         levelKey: "compare",
       ),
@@ -200,7 +213,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         index: 6,
         title: 'Cộng ≤10',
         type: LevelType.topic,
-        state: LevelState.locked,
         route: '/game_addition10',
         levelKey: "addition10",
       ),
@@ -208,7 +220,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         index: 7,
         title: 'Trừ ≤10',
         type: LevelType.topic,
-        state: LevelState.locked,
         route: '/game_subtraction10',
         levelKey: "subtraction10",
       ),
@@ -216,7 +227,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         index: 8,
         title: 'Cộng ≤20',
         type: LevelType.topic,
-        state: LevelState.locked,
         route: '/game_addition20',
         levelKey: "addition20",
       ),
@@ -224,7 +234,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         index: 9,
         title: 'Trừ ≤20',
         type: LevelType.topic,
-        state: LevelState.locked,
         route: '/game_subtraction20',
         levelKey: "subtraction20",
       ),
@@ -232,7 +241,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         index: 10,
         title: 'Cộng ≤50',
         type: LevelType.topic,
-        state: LevelState.locked,
         route: '/game_addition50',
         levelKey: "addition50",
       ),
@@ -240,7 +248,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         index: 11,
         title: 'Trừ ≤50',
         type: LevelType.topic,
-        state: LevelState.locked,
         route: '/game_subtraction50',
         levelKey: "subtraction50",
       ),
@@ -248,7 +255,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         index: 12,
         title: 'Cộng ≤100',
         type: LevelType.topic,
-        state: LevelState.locked,
         route: '/game_addition100',
         levelKey: "addition100",
       ),
@@ -256,7 +262,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         index: 13,
         title: 'Trừ ≤100',
         type: LevelType.topic,
-        state: LevelState.locked,
         route: '/game_subtraction100',
         levelKey: "subtraction100",
       ),
@@ -264,7 +269,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         index: 14,
         title: 'Hình Học',
         type: LevelType.topic,
-        state: LevelState.locked,
         route: '/game_shapes',
         levelKey: "shapes",
       ),
@@ -272,7 +276,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         index: 15,
         title: 'Đo Lường',
         type: LevelType.topic,
-        state: LevelState.locked,
         route: '/game_measure_time',
         levelKey: "measure",
       ),
@@ -280,49 +283,23 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         index: 16,
         title: 'Tổng hợp',
         type: LevelType.boss,
-        state: LevelState.locked,
         route: '/game_final_boss',
         levelKey: "final_boss",
       ),
-      Level(
-        index: 17,
-        title: 'Kết thúc',
-        type: LevelType.end,
-        state: LevelState.locked,
-      ),
+      Level(index: 17, title: 'Kết thúc', type: LevelType.end),
     ];
   }
 
-  /// 🔹 Mở 1 level
+  /// Mở 1 level
   void _openLevel(Level lv) async {
     if (lv.state == LevelState.locked) return;
-    final result = await Navigator.pushNamed(
+    await Navigator.pushNamed(
       context,
       lv.route ?? LevelDetail.routeName,
       arguments: lv.index,
     );
-    if (result == true && lv.state != LevelState.completed) {
-      _markCompleted(lv.index);
-    }
-  }
-
-  /// 🔹 Đánh dấu level hoàn thành
-  Future<void> _markCompleted(int idx) async {
-    final i = levels.indexWhere((e) => e.index == idx);
-    if (i != -1) {
-      levels[i].state = LevelState.completed;
-      if (i + 1 < levels.length && levels[i + 1].state == LevelState.locked) {
-        levels[i + 1].state = LevelState.playable;
-      }
-      mascotPosition = i;
-
-      if (mounted) {
-        _confettiController.play();
-        setState(() {});
-      }
-
-      await ProgressService.saveLevels(levels);
-    }
+    // 🔹 Khi quay lại, load lại danh sách
+    await _refreshLevels();
   }
 
   @override
@@ -334,7 +311,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     const double spacing = 240;
     const double nodeSize = 100;
     const double maxScale = 1.1;
-
     final screenW = MediaQuery.of(context).size.width;
     final screenH = MediaQuery.of(context).size.height;
     final totalHeight = levels.length * spacing + 240;
@@ -342,21 +318,15 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     const extraGlow = 40.0;
     final maxNodeSize = nodeSize * maxScale + extraGlow;
     final safeAmplitude = (screenW - maxNodeSize) / 2 * 0.3;
-
     const double minMargin = 8.0;
     const double bias = -40.0;
-
     final double topPadding =
         kToolbarHeight + MediaQuery.of(context).padding.top + 16;
 
     return AppScaffold(
       title: "Học toán",
       levels: levels,
-      onLevelsChanged: (updated) {
-        setState(() {
-          levels = updated;
-        });
-      },
+      onLevelsChanged: (updated) => setState(() => levels = updated),
       body: Stack(
         children: [
           Positioned.fill(
@@ -380,7 +350,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                             ? _scrollController.offset + screenH / 2
                             : screenH / 2;
                         final distance = (levelTop - centerY).abs();
-
                         final scale = (1.1 - (distance / screenH)).clamp(
                           0.8,
                           1.1,
