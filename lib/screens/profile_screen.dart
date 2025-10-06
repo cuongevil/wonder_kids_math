@@ -15,11 +15,8 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
   int totalStars = 0;
-  int totalDiamonds = 0;
-
   late AnimationController _animController;
   late ConfettiController _confettiController;
-
   String? currentBadgeName;
 
   @override
@@ -40,22 +37,20 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _loadProgress() async {
     final prefs = await SharedPreferences.getInstance();
     final stars = prefs.getInt("totalStars") ?? 0;
-    final diamonds = prefs.getInt("totalDiamonds") ?? 0;
-
     final badge = _getBadge(stars)["name"];
+    final lastBadge = prefs.getString("lastBadge");
 
     setState(() {
       totalStars = stars;
-      totalDiamonds = diamonds;
+      currentBadgeName = badge;
     });
 
-    // 🔥 Nếu huy hiệu mới (khác với lần trước) thì bật confetti
-    if (currentBadgeName != null && currentBadgeName != badge) {
+    // 🎉 Nếu huy hiệu mới => confetti
+    if (lastBadge != badge) {
       _confettiController.play();
       _showNewBadgePopup(badge);
+      prefs.setString("lastBadge", badge);
     }
-
-    currentBadgeName = badge;
   }
 
   Map<String, dynamic> _getBadge(int stars) {
@@ -72,6 +67,15 @@ class _ProfileScreenState extends State<ProfileScreen>
       return {"name": "🥉 Người khởi đầu", "color": Colors.brown};
     }
     return {"name": "🎯 Chưa có huy hiệu", "color": Colors.black45};
+  }
+
+  /// 🌟 Cấp độ danh hiệu
+  String _getLevel(int stars) {
+    if (stars >= 50) return "🌟 Siêu thiên tài";
+    if (stars >= 30) return "🚀 Học sinh xuất sắc";
+    if (stars >= 15) return "🎯 Nhà vô địch nhỏ";
+    if (stars >= 5) return "🎈 Bé chăm ngoan";
+    return "🌱 Người mới bắt đầu";
   }
 
   void _showNewBadgePopup(String badgeName) {
@@ -127,7 +131,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       },
     );
 
-    // Auto đóng sau 3s
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) Navigator.pop(context);
     });
@@ -143,52 +146,78 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   Widget build(BuildContext context) {
     final badge = _getBadge(totalStars);
+    final level = _getLevel(totalStars);
 
     return BaseScreen(
-      title: "👩‍🎓 Thành tích của bé",
+      title: "👩‍🎓 Thành tích",
       child: Stack(
         alignment: Alignment.center,
         children: [
+          // 🌈 Nền gradient
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                // 👩‍🎓 Avatar
-                ScaleTransition(
-                  scale: Tween<double>(begin: 0.95, end: 1.05).animate(
-                    CurvedAnimation(
-                      parent: _animController,
-                      curve: Curves.easeInOut,
-                    ),
-                  ),
+                // 👩‍🎓 Avatar động
+                RotationTransition(
+                  turns: Tween(
+                    begin: -0.05,
+                    end: 0.05,
+                  ).animate(_animController),
                   child: CircleAvatar(
                     radius: 50,
-                    backgroundColor: Colors.deepPurple.shade200,
+                    backgroundColor: Colors.white.withOpacity(0.8),
                     child: const Text("👩‍🎓", style: TextStyle(fontSize: 40)),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
                 Text(
                   "Bé học giỏi",
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Colors.deepPurple.shade700,
+                    color: Colors.white,
                   ),
+                ),
+                Text(
+                  level,
+                  style: const TextStyle(fontSize: 18, color: Colors.white70),
+                ),
+                const SizedBox(height: 25),
+
+                // ⭐ Tổng sao
+                _buildStatCard("⭐ Tổng sao", totalStars, Colors.amber),
+                const SizedBox(height: 25),
+
+                // 🎯 Mục tiêu tuần
+                Text(
+                  "🎯 Mục tiêu tuần",
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: (totalStars % 10) / 10,
+                  minHeight: 10,
+                  backgroundColor: Colors.white30,
+                  color: Colors.greenAccent,
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 const SizedBox(height: 30),
 
-                // ⭐ Sao + 💎 Kim cương
-                _buildStatCard("⭐ Tổng sao", totalStars, Colors.amber),
-                const SizedBox(height: 20),
-                _buildStatCard(
-                  "💎 Tổng kim cương",
-                  totalDiamonds,
-                  Colors.lightBlue,
-                ),
-                const SizedBox(height: 20),
-
-                // 🎖️ Huy hiệu hiện tại
+                // 🏅 Huy hiệu hiện tại
                 Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -226,6 +255,18 @@ class _ProfileScreenState extends State<ProfileScreen>
 
                 const Spacer(),
 
+                // 🌟 Quote động
+                Text(
+                  "“Mỗi ngôi sao là một bước tiến đến giấc mơ của bé ✨”",
+                  style: TextStyle(
+                    fontStyle: FontStyle.italic,
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+
+                // 🏅 Nút xem bộ sưu tập
                 ElevatedButton.icon(
                   icon: const Icon(Icons.collections),
                   label: const Text("Xem bộ sưu tập huy hiệu"),
@@ -252,9 +293,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                     );
                   },
                 ),
-
                 const SizedBox(height: 20),
 
+                // ⬅️ Quay lại
                 ElevatedButton.icon(
                   icon: const Icon(Icons.arrow_back),
                   label: const Text("Quay lại"),

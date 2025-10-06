@@ -71,7 +71,7 @@ class _LevelDetailState extends State<LevelDetail>
     final bool isStartLevel = levelIndex == 0;
 
     return BaseScreen(
-      title: isStartLevel ? "Xin chào" : "Chi tiết Level $levelIndex",
+      title: isStartLevel ? "Bắt đầu" : "Chi tiết Level $levelIndex",
       child: Stack(
         children: [
           Center(
