@@ -287,7 +287,6 @@ class _MapScreenState extends State<MapScreen>
         route: '/game_final_boss',
         levelKey: "final_boss",
       ),
-      Level(index: 17, title: 'Kết thúc', type: LevelType.end),
     ];
   }
 

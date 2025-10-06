@@ -293,12 +293,6 @@ class _AppScaffoldState extends State<AppScaffold> {
         route: '/game_final_boss',
         levelKey: "final_boss",
       ),
-      Level(
-        index: 17,
-        title: 'Kết thúc',
-        type: LevelType.end,
-        state: LevelState.locked,
-      ),
     ];
   }
 
