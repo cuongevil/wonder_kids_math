@@ -1,8 +1,11 @@
 import 'dart:math';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../services/progress_service.dart';
 import '../widgets/wow_mascot.dart';
 import 'base_screen.dart';
 
@@ -48,8 +51,9 @@ class _GameAddition10ScreenState extends State<GameAddition10Screen>
   @override
   void initState() {
     super.initState();
-    _confettiController =
-        ConfettiController(duration: const Duration(seconds: 1));
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 1),
+    );
     _popupController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -155,10 +159,15 @@ class _GameAddition10ScreenState extends State<GameAddition10Screen>
     showDialog(
       context: context,
       builder: (_) => ScaleTransition(
-        scale: CurvedAnimation(parent: _popupController, curve: Curves.elasticOut),
+        scale: CurvedAnimation(
+          parent: _popupController,
+          curve: Curves.elasticOut,
+        ),
         child: AlertDialog(
           backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Text(
             title,
             textAlign: TextAlign.center,
@@ -179,7 +188,7 @@ class _GameAddition10ScreenState extends State<GameAddition10Screen>
                 ),
               ),
               child: const Text("Tiếp tục ➡️"),
-            )
+            ),
           ],
         ),
       ),
@@ -190,14 +199,21 @@ class _GameAddition10ScreenState extends State<GameAddition10Screen>
     await _play("victory");
     _confettiController.play();
 
+    await ProgressService.markLevelCompleted("addition10");
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => ScaleTransition(
-        scale: CurvedAnimation(parent: _popupController, curve: Curves.easeOutBack),
+        scale: CurvedAnimation(
+          parent: _popupController,
+          curve: Curves.easeOutBack,
+        ),
         child: AlertDialog(
           backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: const Text(
             "🏆 Giỏi quá!",
             textAlign: TextAlign.center,
@@ -301,9 +317,7 @@ class _GameAddition10ScreenState extends State<GameAddition10Screen>
                   fontSize: 48,
                   fontWeight: FontWeight.w900,
                   color: Colors.deepPurple,
-                  shadows: [
-                    Shadow(offset: Offset(2, 2), color: Colors.white),
-                  ],
+                  shadows: [Shadow(offset: Offset(2, 2), color: Colors.white)],
                 ),
               ),
               const SizedBox(height: 30),
@@ -314,26 +328,28 @@ class _GameAddition10ScreenState extends State<GameAddition10Screen>
                 children: options
                     .map(
                       (opt) => ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurpleAccent,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 32, vertical: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.deepPurpleAccent,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 18,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          elevation: 8,
+                        ),
+                        onPressed: () => _check(opt),
+                        child: Text(
+                          "$opt",
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
-                      elevation: 8,
-                    ),
-                    onPressed: () => _check(opt),
-                    child: Text(
-                      "$opt",
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                )
+                    )
                     .toList(),
               ),
               const SizedBox(height: 40),

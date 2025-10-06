@@ -163,6 +163,7 @@ class _AppScaffoldState extends State<AppScaffold> {
         title: 'Bắt đầu',
         type: LevelType.start,
         state: LevelState.playable,
+        levelKey: "start",
       ),
       Level(
         index: 1,

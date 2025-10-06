@@ -1,9 +1,11 @@
 import 'dart:math';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/progress_service.dart';
 import '../widgets/wow_mascot.dart';
 import 'base_screen.dart';
 
@@ -50,8 +52,9 @@ class _GameSubtraction100ScreenState extends State<GameSubtraction100Screen>
   @override
   void initState() {
     super.initState();
-    _confettiController =
-        ConfettiController(duration: const Duration(seconds: 1));
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 1),
+    );
     _popupController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -183,6 +186,8 @@ class _GameSubtraction100ScreenState extends State<GameSubtraction100Screen>
     await _play("victory");
     _confettiController.play();
 
+    await ProgressService.markLevelCompleted("subtraction100");
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -302,28 +307,28 @@ class _GameSubtraction100ScreenState extends State<GameSubtraction100Screen>
                 children: options
                     .map(
                       (opt) => ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepOrangeAccent,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 18,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.deepOrangeAccent,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 18,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          elevation: 8,
+                        ),
+                        onPressed: () => _check(opt),
+                        child: Text(
+                          "$opt",
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      elevation: 8,
-                    ),
-                    onPressed: () => _check(opt),
-                    child: Text(
-                      "$opt",
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                )
+                    )
                     .toList(),
               ),
               const SizedBox(height: 40),

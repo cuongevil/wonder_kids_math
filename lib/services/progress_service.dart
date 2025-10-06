@@ -129,7 +129,7 @@ class ProgressService {
   // ======================================================
 
   /// 🔹 Cập nhật trạng thái level (hoàn thành / mở khoá tiếp theo)
-  static Future<void> markLevelCompleted(
+  static Future<void> markLevelCompletedByIndex(
       List<Level> levels, int index) async {
     if (index < 0 || index >= levels.length) return;
     levels[index].state = LevelState.completed;
@@ -140,9 +140,33 @@ class ProgressService {
     await saveLevels(levels);
   }
 
+  /// 🔹 Đánh dấu level hoàn thành theo levelKey
+  static Future<void> markLevelCompleted(String levelKey) async {
+    final levels = await ensureDefaultLevels(() => []);
+    final index = levels.indexWhere((e) => e.levelKey == levelKey);
+    if (index != -1) {
+      levels[index].state = LevelState.completed;
+      if (index + 1 < levels.length &&
+          levels[index + 1].state == LevelState.locked) {
+        levels[index + 1].state = LevelState.playable;
+      }
+      await saveLevels(levels);
+    }
+  }
+
   /// 🔹 Kiểm tra xem tất cả các level có ít nhất 1 playable chưa
   static Future<bool> hasPlayableLevel() async {
     final levels = await loadLevels();
     return levels.any((e) => e.state == LevelState.playable);
+  }
+
+  /// 🔹 Reset trạng thái 1 level (debug)
+  static Future<void> resetLevelState(String levelKey) async {
+    final levels = await loadLevels();
+    final index = levels.indexWhere((e) => e.levelKey == levelKey);
+    if (index != -1) {
+      levels[index].state = LevelState.playable;
+      await saveLevels(levels);
+    }
   }
 }

@@ -5,6 +5,7 @@ import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/progress_service.dart';
 import '../widgets/wow_mascot.dart';
 import 'base_screen.dart';
 
@@ -190,6 +191,8 @@ class _GameAddition50ScreenState extends State<GameAddition50Screen>
   void _showRewardDialog() async {
     await _play("victory");
     _confettiController.play();
+
+    await ProgressService.markLevelCompleted("addition50");
 
     showDialog(
       context: context,

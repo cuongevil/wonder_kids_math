@@ -173,6 +173,7 @@ class _MapScreenState extends State<MapScreen>
         title: 'Bắt đầu',
         type: LevelType.start,
         state: LevelState.playable,
+        levelKey: "start",
       ),
       Level(
         index: 1,

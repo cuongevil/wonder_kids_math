@@ -158,7 +158,7 @@ class _LevelDetailState extends State<LevelDetail>
 
               // 🔹 Cập nhật trạng thái: Level 0 hoàn thành, Level 1 playable
               _levels = await ProgressService.ensureDefaultLevels(() => []);
-              await ProgressService.markLevelCompleted(_levels, 0);
+              await ProgressService.markLevelCompleted("start");
 
               // 🔹 Chờ hiệu ứng rồi quay lại Map
               await Future.delayed(const Duration(seconds: 2));
@@ -222,7 +222,8 @@ class _LevelDetailState extends State<LevelDetail>
     await _player.play(AssetSource("audios/crown.mp3"));
 
     _levels = await ProgressService.ensureDefaultLevels(() => []);
-    await ProgressService.markLevelCompleted(_levels, index);
+
+    await ProgressService.markLevelCompleted("addition10");
 
     await Future.delayed(const Duration(seconds: 2));
     if (mounted) Navigator.pop(context, true);
