@@ -368,14 +368,14 @@ class _AppScaffoldState extends State<AppScaffold> {
                     tooltip: "Bộ sưu tập huy hiệu",
                     onTap: () => Navigator.pushNamed(context, "/badges"),
                   ),
-                  if (kDebugMode)
-                    _buildKidIconButton(
-                      context: context,
-                      color: Colors.orangeAccent,
-                      icon: Icons.bug_report,
-                      tooltip: "Debug Levels",
-                      onTap: _debugLevels,
-                    ),
+                  // if (kDebugMode)
+                  //   _buildKidIconButton(
+                  //     context: context,
+                  //     color: Colors.orangeAccent,
+                  //     icon: Icons.bug_report,
+                  //     tooltip: "Debug Levels",
+                  //     onTap: _debugLevels,
+                  //   ),
                 ],
               ),
             ),
