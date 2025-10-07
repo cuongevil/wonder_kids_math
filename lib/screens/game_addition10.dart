@@ -304,7 +304,7 @@ class _GameAddition10ScreenState extends State<GameAddition10Screen>
           Positioned(
             bottom: 100,
             right: 24,
-            child: WowMascot(isHappy: isMascotHappy),
+            child: WowMascot.only(isHappy: isMascotHappy, scale: 0.8),
           ),
 
           // 📘 Nội dung chính

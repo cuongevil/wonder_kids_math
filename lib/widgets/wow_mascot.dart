@@ -1,8 +1,40 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 
+/// 🧸 Widget linh vật dễ thương để cổ vũ bé.
+/// Có 2 cảm xúc: vui (isHappy = true) và buồn (isHappy = false).
+/// Hỗ trợ 2 chế độ:
+/// 1️⃣ Có bong bóng lời nói: dùng constructor mặc định.
+/// 2️⃣ Chỉ mascot: dùng WowMascot.only().
+///
+/// Ví dụ:
+/// WowMascot(isHappy: true, message: "Bé giỏi quá!")
+/// WowMascot.only(isHappy: false)
+
 class WowMascot extends StatefulWidget {
-  final bool isHappy; // ✅ Trạng thái cảm xúc
-  const WowMascot({super.key, this.isHappy = true});
+  final bool isHappy;
+  final String? message;
+  final double scale;
+  final bool animate;
+  final bool showMessage;
+
+  const WowMascot({
+    super.key,
+    required this.isHappy,
+    required this.message,
+    this.scale = 1.0,
+    this.animate = true,
+    this.showMessage = true,
+  });
+
+  /// 🧸 Dùng khi chỉ muốn hiển thị mascot (không có lời nói)
+  const WowMascot.only({
+    super.key,
+    required this.isHappy,
+    this.scale = 1.0,
+    this.animate = true,
+  })  : message = null,
+        showMessage = false;
 
   @override
   State<WowMascot> createState() => _WowMascotState();
@@ -11,28 +43,16 @@ class WowMascot extends StatefulWidget {
 class _WowMascotState extends State<WowMascot>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _bounce;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(seconds: 2),
     );
-    _bounce = Tween<double>(begin: 0, end: 10).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-    _controller.repeat(reverse: true);
-  }
-
-  @override
-  void didUpdateWidget(covariant WowMascot oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    // Khi thay đổi cảm xúc => reset animation cho mượt
-    if (oldWidget.isHappy != widget.isHappy) {
-      _controller.forward(from: 0);
+    if (widget.animate) {
+      _controller.repeat(reverse: true);
     }
   }
 
@@ -42,32 +62,87 @@ class _WowMascotState extends State<WowMascot>
     super.dispose();
   }
 
+  /// 🖼️ Trả về đường dẫn ảnh mascot tương ứng cảm xúc
+  String get _mascotAsset =>
+      widget.isHappy ? 'assets/images/mascot/mascot_happy.png' : 'assets/images/mascot/mascot_sad.png';
+
+  /// 🌈 Màu nền pastel tương ứng
+  Color get _backgroundColor =>
+      widget.isHappy ? Colors.pinkAccent.shade100 : Colors.blueAccent.shade100;
+
   @override
   Widget build(BuildContext context) {
-    final String imagePath = widget.isHappy
-        ? 'assets/images/mascot/mascot_happy.png'
-        : 'assets/images/mascot/mascot_sad.png';
-
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final double offsetY =
-        widget.isHappy ? -_bounce.value : _bounce.value / 2;
-
-        return Transform.translate(
-          offset: Offset(0, offsetY),
-          child: AnimatedScale(
-            scale: widget.isHappy ? 1.05 : 0.9,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutBack,
-            child: Image.asset(
-              imagePath,
-              width: 90,
-              height: 90,
+    return ScaleTransition(
+      scale: Tween(begin: 0.95, end: 1.05).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+      ),
+      child: Transform.translate(
+        offset: Offset(0, sin(_controller.value * pi * 2) * 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 🌈 Vòng tròn pastel + mascot
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _backgroundColor.withOpacity(0.6),
+                boxShadow: [
+                  BoxShadow(
+                    color: _backgroundColor.withOpacity(0.4),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Image.asset(
+                _mascotAsset,
+                width: 80 * widget.scale,
+                height: 80 * widget.scale,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.image_not_supported_outlined,
+                  size: 40,
+                  color: Colors.grey,
+                ),
+              ),
             ),
-          ),
-        );
-      },
+
+            // 🗨️ Bong bóng lời nói (tùy chọn)
+            if (widget.showMessage && widget.message != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                margin: const EdgeInsets.only(top: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      color: Colors.purpleAccent.withOpacity(0.4)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.purpleAccent.withOpacity(0.2),
+                      blurRadius: 8,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  widget.message!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16 * widget.scale,
+                    color: Colors.deepPurple,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

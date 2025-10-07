@@ -195,7 +195,7 @@ class _GameFinalBossScreenState extends State<GameFinalBossScreen>
           Positioned(
             bottom: 100,
             right: 24,
-            child: WowMascot(isHappy: isMascotHappy),
+            child: WowMascot.only(isHappy: isMascotHappy, scale: 0.8)
           ),
 
           // 📚 Nội dung

@@ -286,7 +286,7 @@ class _GameSubtraction50ScreenState extends State<GameSubtraction50Screen>
           Positioned(
             bottom: 100,
             right: 24,
-            child: WowMascot(isHappy: isMascotHappy),
+            child: WowMascot.only(isHappy: isMascotHappy, scale: 0.8)
           ),
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
