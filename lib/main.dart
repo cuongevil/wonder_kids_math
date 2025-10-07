@@ -31,6 +31,7 @@ class WonderKidsMathApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Wonder Kids Học Toán',
       navigatorObservers: [appRouteObserver],
       theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.deepPurple),
