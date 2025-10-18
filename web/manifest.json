@@ -1,6 +1,6 @@
 {
-    "name": "wonder_kids_math",
-    "short_name": "wonder_kids_math",
+    "name": "wonderkids.math",
+    "short_name": "wonderkids.math",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

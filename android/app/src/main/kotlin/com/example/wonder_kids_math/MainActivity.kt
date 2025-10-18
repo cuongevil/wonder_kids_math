@@ -1,4 +1,4 @@
-package com.ctmd.wonderforge.wonder_kids_math
+package com.ctmd.wonderforge.wonderkids.math
 
 import io.flutter.embedding.android.FlutterActivity
 

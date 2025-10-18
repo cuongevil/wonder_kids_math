@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace "com.ctmd.wonderforge.wonder_kids_math"
+    namespace "com.ctmd.wonderforge.wonderkids.math"
     compileSdkVersion 36
 
     defaultConfig {
-        applicationId "com.ctmd.wonderforge.wonder_kids_math"
+        applicationId "com.ctmd.wonderforge.wonderkids.math"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion 36
         versionCode 1

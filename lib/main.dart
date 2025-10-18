@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:wonder_kids_math/screens/badge_collection_screen.dart';
-import 'package:wonder_kids_math/screens/game_addition100.dart';
-import 'package:wonder_kids_math/screens/game_addition50.dart';
-import 'package:wonder_kids_math/screens/game_subtraction100.dart';
-import 'package:wonder_kids_math/screens/game_subtraction50.dart';
-import 'package:wonder_kids_math/screens/leaderboard_screen.dart';
-import 'package:wonder_kids_math/screens/learn_numbers_100.dart';
-import 'package:wonder_kids_math/screens/learn_numbers_50.dart';
-import 'package:wonder_kids_math/screens/profile_screen.dart';
+import 'package:wonderkids.math/screens/badge_collection_screen.dart';
+import 'package:wonderkids.math/screens/game_addition100.dart';
+import 'package:wonderkids.math/screens/game_addition50.dart';
+import 'package:wonderkids.math/screens/game_subtraction100.dart';
+import 'package:wonderkids.math/screens/game_subtraction50.dart';
+import 'package:wonderkids.math/screens/leaderboard_screen.dart';
+import 'package:wonderkids.math/screens/learn_numbers_100.dart';
+import 'package:wonderkids.math/screens/learn_numbers_50.dart';
+import 'package:wonderkids.math/screens/profile_screen.dart';
 
 import 'screens/game_addition10.dart';
 import 'screens/game_addition20.dart';
