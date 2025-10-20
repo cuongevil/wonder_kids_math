@@ -1,8 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="wonderkids.math"
+        android:label="Wonder Kids Vui Học Toán"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+
+        <!-- ✅ Bắt buộc: AdMob App ID -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-4467146889101185~1387387870" />
+        <!-- 🔸 Dòng trên là sample ID, hãy thay bằng App ID thật của bạn khi build release -->
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

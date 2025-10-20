@@ -32,7 +32,7 @@ class WonderKidsMathApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Wonder Kids Học Toán',
+      title: 'Wonder Kids Vui Học Toán',
       navigatorObservers: [appRouteObserver],
       theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.deepPurple),
       initialRoute: '/',
