@@ -1,7 +1,7 @@
 import 'dart:math';
-import 'dart:ui'; // 👈 để dùng BackdropFilter
-
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../themes/app_theme.dart';
 
 class MapBackground extends StatefulWidget {
   final ScrollController scrollController;
@@ -63,13 +63,16 @@ class _MapBackgroundState extends State<MapBackground>
     with TickerProviderStateMixin {
   late bool isNight;
 
-  late AnimationController _fadeController;
-  late AnimationController _swayController;
-  late AnimationController _starController;
+  // 🌈 Controllers
+  late AnimationController _overlayController;
+  late AnimationController _glowController;
   late AnimationController _skyBodyController;
+  late AnimationController _swayController;
   late AnimationController _cloudController;
-  late AnimationController _overlayController; // 👈 breathing overlay
 
+  final List<CloudConfig> _clouds = [];
+  final List<ShootingStar> _shootingStars = [];
+  final List<FallingItem> _fallingItems = [];
   final balloons = [
     "assets/images/balloon1.png",
     "assets/images/balloon2.png",
@@ -78,86 +81,78 @@ class _MapBackgroundState extends State<MapBackground>
 
   late String _currentBalloon;
   late String _nextBalloon;
+  late AnimationController _fadeController;
   double _balloonYOffset = 0;
-
-  late final List<Offset> _starPositions;
-  late final List<Offset> _sparklePositions;
-  final List<FallingItem> _fallingItems = [];
-
-  late final List<CloudConfig> _clouds;
-  final List<ShootingStar> _shootingStars = []; // 🌠 danh sách sao băng
 
   @override
   void initState() {
     super.initState();
+    final rnd = Random();
     final hour = DateTime.now().hour;
     isNight = hour >= 18 || hour < 6;
 
-    final rnd = Random();
-    _currentBalloon = balloons[rnd.nextInt(balloons.length)];
-    _nextBalloon = balloons[rnd.nextInt(balloons.length)];
-    _balloonYOffset = 50 + rnd.nextDouble() * 120;
-
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 3),
-    );
-    _swayController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4),
-    )..repeat(reverse: true);
-    _starController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 3),
-    )..repeat(reverse: true);
-    _skyBodyController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 60),
-    )..repeat();
-    _cloudController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 120),
-    )..repeat();
-
-    // 👇 breathing overlay: ban ngày 6s, ban đêm 3s
+    // 🌫 breathing overlay (day/night speed khác nhau)
     _overlayController = AnimationController(
       vsync: this,
       duration: Duration(seconds: isNight ? 3 : 6),
     )..repeat(reverse: true);
 
-    _starPositions = List.generate(
-      20,
-      (_) => Offset(rnd.nextDouble() * 400, rnd.nextDouble() * 300),
-    );
-    _sparklePositions = List.generate(8, (_) {
-      final angle = rnd.nextDouble() * 2 * pi;
-      final r = 60 + rnd.nextDouble() * 30;
-      return Offset(cos(angle) * r, sin(angle) * r);
-    });
+    // 🌈 tím–cam ánh sáng chậm
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 20),
+    )..repeat(reverse: true);
 
-    _clouds = List.generate(6 + rnd.nextInt(3), (_) {
-      return CloudConfig(
+    // ☀️ / 🌙 di chuyển chậm
+    _skyBodyController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 60),
+    )..repeat();
+
+    // 🌬 Mây bay
+    _cloudController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 120),
+    )..repeat();
+
+    // 🎈 Balloon fade
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    );
+
+    _swayController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat(reverse: true);
+
+    // 🌥 Tạo mây ngẫu nhiên
+    for (int i = 0; i < 6 + rnd.nextInt(3); i++) {
+      _clouds.add(CloudConfig(
         top: 80 + rnd.nextDouble() * 300,
         size: 100 + rnd.nextDouble() * 150,
-        speed: 0.2 + rnd.nextDouble() * 0.8,
+        speed: 0.3 + rnd.nextDouble() * 0.7,
         opacity: 0.4 + rnd.nextDouble() * 0.6,
-      );
-    });
+      ));
+    }
+
+    // 🎈 Balloon khởi tạo
+    _currentBalloon = balloons[rnd.nextInt(balloons.length)];
+    _nextBalloon = balloons[rnd.nextInt(balloons.length)];
+    _balloonYOffset = 50 + rnd.nextDouble() * 120;
 
     Future.delayed(const Duration(seconds: 20), _changeBalloon);
-    _startAutoSpawn();
-    _startShootingStar(); // 🌠 bắt đầu spawn sao băng
+    _spawnAutoFallingItem();
+    _spawnShootingStar();
 
-    // auto update ngày ↔ đêm
+    // Tự động chuyển ngày / đêm
     Future.doWhile(() async {
       await Future.delayed(const Duration(minutes: 1));
       if (!mounted) return false;
-      final hourNow = DateTime.now().hour;
-      final newIsNight = hourNow >= 18 || hourNow < 6;
-      if (newIsNight != isNight) {
+      final newNight = DateTime.now().hour >= 18 || DateTime.now().hour < 6;
+      if (newNight != isNight) {
         setState(() {
-          isNight = newIsNight;
-          // cập nhật nhịp thở theo ngày/đêm
+          isNight = newNight;
           _overlayController.duration = Duration(seconds: isNight ? 3 : 6);
           _overlayController.reset();
           _overlayController.repeat(reverse: true);
@@ -167,52 +162,46 @@ class _MapBackgroundState extends State<MapBackground>
     });
   }
 
-  void _startAutoSpawn() {
+  // ❤️ Spawn item rơi nhẹ
+  void _spawnAutoFallingItem() {
     final rnd = Random();
-    Future.delayed(Duration(seconds: 3 + rnd.nextInt(3)), () {
+    Future.delayed(Duration(seconds: 3 + rnd.nextInt(4)), () {
       if (!mounted) return;
-      final balloonX = MediaQuery.of(context).size.width / 2;
-      _spawnFallingItem(balloonX);
-      _startAutoSpawn();
+      final screenW = MediaQuery.of(context).size.width;
+      final controller = AnimationController(
+        vsync: this,
+        duration: const Duration(seconds: 4),
+      )..forward();
+
+      final item = FallingItem(
+        icon: rnd.nextBool() ? Icons.favorite : Icons.star,
+        color: rnd.nextBool() ? Colors.pinkAccent : Colors.amberAccent,
+        startX: screenW / 2 + rnd.nextDouble() * 80 - 40,
+        size: 14 + rnd.nextDouble() * 8,
+        controller: controller,
+      );
+
+      controller.addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          _fallingItems.remove(item);
+          controller.dispose();
+        }
+      });
+
+      setState(() => _fallingItems.add(item));
+      _spawnAutoFallingItem();
     });
   }
 
-  void _spawnFallingItem(double balloonX) {
+  // 🌠 Sao băng
+  void _spawnShootingStar() {
     final rnd = Random();
-    final isHeart = rnd.nextBool();
-
-    final controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4),
-    )..forward();
-
-    final item = FallingItem(
-      icon: isHeart ? Icons.favorite : Icons.star,
-      color: isHeart ? Colors.pinkAccent : Colors.amber,
-      startX: balloonX + rnd.nextDouble() * 80 - 40,
-      size: 14 + rnd.nextDouble() * 8,
-      controller: controller,
-    );
-
-    controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _fallingItems.remove(item);
-        controller.dispose();
-      }
-    });
-
-    setState(() => _fallingItems.add(item));
-  }
-
-  void _startShootingStar() {
-    final rnd = Random();
-    Future.delayed(Duration(seconds: 8 + rnd.nextInt(12)), () {
+    Future.delayed(Duration(seconds: 8 + rnd.nextInt(10)), () {
       if (!mounted) return;
       if (isNight) {
         final width = MediaQuery.of(context).size.width;
         final startX = rnd.nextDouble() * width * 0.5;
         final startY = rnd.nextDouble() * 200.0;
-
         final controller = AnimationController(
           vsync: this,
           duration: const Duration(seconds: 2),
@@ -224,8 +213,8 @@ class _MapBackgroundState extends State<MapBackground>
           startY: startY,
         );
 
-        controller.addStatusListener((status) {
-          if (status == AnimationStatus.completed) {
+        controller.addStatusListener((s) {
+          if (s == AnimationStatus.completed) {
             _shootingStars.remove(star);
             controller.dispose();
           }
@@ -233,10 +222,11 @@ class _MapBackgroundState extends State<MapBackground>
 
         setState(() => _shootingStars.add(star));
       }
-      _startShootingStar(); // loop
+      _spawnShootingStar();
     });
   }
 
+  // 🎈 Thay balloon
   void _changeBalloon() {
     final rnd = Random();
     _nextBalloon = balloons[rnd.nextInt(balloons.length)];
@@ -248,17 +238,17 @@ class _MapBackgroundState extends State<MapBackground>
 
   @override
   void dispose() {
-    _fadeController.dispose();
-    _swayController.dispose();
-    _starController.dispose();
-    _skyBodyController.dispose();
-    _cloudController.dispose();
     _overlayController.dispose();
-    for (var item in _fallingItems) {
-      item.controller.dispose();
+    _glowController.dispose();
+    _skyBodyController.dispose();
+    _swayController.dispose();
+    _fadeController.dispose();
+    _cloudController.dispose();
+    for (var f in _fallingItems) {
+      f.controller.dispose();
     }
-    for (var star in _shootingStars) {
-      star.controller.dispose();
+    for (var s in _shootingStars) {
+      s.controller.dispose();
     }
     super.dispose();
   }
@@ -266,198 +256,168 @@ class _MapBackgroundState extends State<MapBackground>
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
+    final sway = sin(_swayController.value * 2 * pi) * 10;
     final skyBodyX = isNight
         ? (1 - _skyBodyController.value) * width
         : _skyBodyController.value * width;
-    final sway = sin(_swayController.value * 2 * pi) * 10;
 
-    return AnimatedSwitcher(
-      duration: const Duration(seconds: 2),
-      child: Stack(
-        key: ValueKey(isNight ? "night" : "day"),
-        children: [
-          // 🌅 Gradient
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: isNight
-                    ? const [Color(0xFF0D1B2A), Color(0xFF1B263B)]
-                    : const [Color(0xFFE1F5FE), Color(0xFFFFF9C4)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+    return AnimatedBuilder(
+      animation:
+      Listenable.merge([_overlayController, _glowController, _cloudController]),
+      builder: (context, _) {
+        final glowShift = sin(_glowController.value * 2 * pi) * 0.5 + 0.5;
+        final breath =
+            sin(_overlayController.value * 2 * pi) * (isNight ? 0.06 : 0.03);
+        final baseColors = isNight
+            ? const [Color(0xFF0D1B2A), Color(0xFF1B263B)]
+            : const [Color(0xFFE1F5FE), Color(0xFFFFF9C4)];
+
+        final overlayGradient = LinearGradient(
+          colors: [
+            AppTheme.tpPurple.withOpacity(0.3 + breath),
+            AppTheme.tpOrange.withOpacity(0.3 - breath),
+          ],
+          begin: Alignment(-1.0 + glowShift, -1.0),
+          end: Alignment(1.0 - glowShift, 1.0),
+        );
+
+        return Stack(
+          children: [
+            // 🌅 Base sky gradient
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: baseColors,
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
             ),
-          ),
 
-          // ☀️/🌙 Sun/Moon + sparkles
-          Positioned(
-            top: 80,
-            left: skyBodyX - 60,
-            child: Stack(
-              children: [
-                Image.asset(
-                  isNight ? 'assets/images/moon.png' : 'assets/images/sun.png',
-                  width: 120,
-                ),
-                for (var pos in _sparklePositions)
-                  Positioned(
-                    left: 60 + pos.dx,
-                    top: 60 + pos.dy,
-                    child: ScaleTransition(
-                      scale: Tween(begin: 0.5, end: 1.2).animate(
-                        CurvedAnimation(
-                          parent: _starController,
-                          curve: Curves.easeInOut,
+            // 🌈 Moving purple-orange light overlay
+            Container(
+              decoration: BoxDecoration(
+                gradient: overlayGradient,
+                backgroundBlendMode: BlendMode.screen,
+              ),
+            ),
+
+            // ☀️ or 🌙
+            Positioned(
+              top: 80,
+              left: skyBodyX - 60,
+              child: Image.asset(
+                isNight
+                    ? 'assets/images/moon.png'
+                    : 'assets/images/sun.png',
+                width: 120,
+                opacity: const AlwaysStoppedAnimation(0.9),
+              ),
+            ),
+
+            // ☁️ Clouds moving slowly
+            AnimatedBuilder(
+              animation: _cloudController,
+              builder: (_, __) {
+                final base = _cloudController.value * (width + 800);
+                return Stack(
+                  children: [
+                    for (var c in _clouds)
+                      Positioned(
+                        left: -400 + (base * c.speed) % (width + 800),
+                        top: c.top,
+                        child: Opacity(
+                          opacity: c.opacity,
+                          child: Image.asset(
+                            "assets/images/cloud.png",
+                            width: c.size,
+                          ),
                         ),
                       ),
-                      child: Icon(
-                        Icons.star,
-                        size: 10,
-                        color: isNight ? Colors.yellowAccent : Colors.white70,
-                      ),
-                    ),
-                  ),
-              ],
+                  ],
+                );
+              },
             ),
-          ),
 
-          // ✨ Stars ban đêm
-          if (isNight)
-            for (var pos in _starPositions)
-              Positioned(
-                left: pos.dx,
-                top: pos.dy,
-                child: FadeTransition(
-                  opacity: Tween(begin: 0.2, end: 1.0).animate(_starController),
-                  child: const Icon(Icons.star, color: Colors.white, size: 14),
-                ),
+            // 🌠 Shooting stars
+            for (var star in _shootingStars)
+              AnimatedBuilder(
+                animation: star.controller,
+                builder: (context, _) {
+                  final t = star.controller.value;
+                  return Positioned(
+                    left: star.startX + t * 300,
+                    top: star.startY + t * 150,
+                    child: Opacity(
+                      opacity: 1 - t,
+                      child:
+                      const Icon(Icons.star, color: Colors.white, size: 12),
+                    ),
+                  );
+                },
               ),
 
-          // 🌠 Shooting stars
-          for (var star in _shootingStars)
-            AnimatedBuilder(
-              animation: star.controller,
-              builder: (context, _) {
-                final progress = star.controller.value;
-                return Positioned(
-                  left: star.startX + progress * 300,
-                  top: star.startY + progress * 150,
-                  child: Opacity(
-                    opacity: 1 - progress,
-                    child: Icon(Icons.star, color: Colors.white, size: 12),
-                  ),
-                );
-              },
-            ),
-
-          // 🎈 Balloon
-          Positioned(
-            left: (width * 0.4) + sway,
-            top: 160 + _balloonYOffset,
-            child: Stack(
-              children: [
-                Image.asset(_currentBalloon, width: 100, gaplessPlayback: true),
-                FadeTransition(
-                  opacity: _fadeController,
-                  child: Image.asset(
-                    _nextBalloon,
-                    width: 100,
-                    gaplessPlayback: true,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ❤️ Falling items
-          for (var item in _fallingItems)
-            AnimatedBuilder(
-              animation: item.controller,
-              builder: (context, _) {
-                final progress = item.controller.value;
-                return Positioned(
-                  left: item.startX,
-                  top: 200 + progress * 400,
-                  child: Opacity(
-                    opacity: 1 - progress,
-                    child: Icon(item.icon, color: item.color, size: item.size),
-                  ),
-                );
-              },
-            ),
-
-          // ☁️ Clouds random parallax + opacity
-          AnimatedBuilder(
-            animation: _cloudController,
-            builder: (context, _) {
-              final base = _cloudController.value * (width + 800);
-              return Stack(
+            // 🎈 Balloon with sway and fade transition
+            Positioned(
+              left: (width * 0.4) + sway,
+              top: 160 + _balloonYOffset,
+              child: Stack(
                 children: [
-                  for (var cloud in _clouds)
-                    Positioned(
-                      left: -400 + (base * cloud.speed) % (width + 800),
-                      top: cloud.top,
-                      child: Opacity(
-                        opacity: cloud.opacity,
-                        child: Image.asset(
-                          "assets/images/cloud.png",
-                          width: cloud.size,
-                        ),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
-
-          // 🏔️ Mountains
-          _Mountains(isNight: isNight),
-
-          // 🔲 Overlay mờ + Blur thở nhẹ
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _overlayController,
-              builder: (context, _) {
-                final baseOpacity = isNight ? 0.45 : 0.25;
-                final extra = isNight ? 0.05 : 0.03; // ban đêm thở mạnh hơn
-                final breathingOpacity =
-                    baseOpacity +
-                    sin(_overlayController.value * 2 * pi) * extra;
-
-                return BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
-                  child: Container(
-                    color: Colors.black.withOpacity(
-                      breathingOpacity.clamp(0.2, 0.55),
-                    ),
+                  Image.asset(_currentBalloon,
+                      width: 100, gaplessPlayback: true),
+                  FadeTransition(
+                    opacity: _fadeController,
+                    child: Image.asset(_nextBalloon,
+                        width: 100, gaplessPlayback: true),
                   ),
-                );
-              },
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
-class _Mountains extends StatelessWidget {
-  final bool isNight;
+            // ❤️ Falling items
+            for (var item in _fallingItems)
+              AnimatedBuilder(
+                animation: item.controller,
+                builder: (context, _) {
+                  final t = item.controller.value;
+                  return Positioned(
+                    left: item.startX,
+                    top: 200 + t * 400,
+                    child: Opacity(
+                      opacity: 1 - t,
+                      child: Icon(item.icon,
+                          color: item.color, size: item.size),
+                    ),
+                  );
+                },
+              ),
 
-  const _Mountains({required this.isNight});
+            // 🌫 Breathing blur overlay
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                child: Container(
+                  color: isNight
+                      ? Colors.black.withOpacity(0.25 + breath.abs())
+                      : Colors.white.withOpacity(0.10 + breath.abs()),
+                ),
+              ),
+            ),
 
-  @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: Image.asset(
-        'assets/images/mountains_layer1.png',
-        fit: BoxFit.cover,
-        height: size.height * 0.3,
-      ),
+            // 🏔️ Mountains base layer
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Image.asset(
+                'assets/images/mountains_layer1.png',
+                fit: BoxFit.cover,
+                height: MediaQuery.of(context).size.height * 0.3,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

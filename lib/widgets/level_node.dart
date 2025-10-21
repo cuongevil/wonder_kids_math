@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/level.dart';
+import '../themes/app_theme.dart';
 
 class LevelNode extends StatefulWidget {
   final Level level;
@@ -22,6 +24,8 @@ class LevelNode extends StatefulWidget {
 
 class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
   late final AnimationController _sparkleController;
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseAnim;
 
   @override
   void initState() {
@@ -30,12 +34,24 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
       vsync: this,
       duration: const Duration(seconds: 6),
     )..repeat();
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+      lowerBound: 0.95,
+      upperBound: 1.05,
+    )..repeat(reverse: true);
+
+    _pulseAnim = CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
   void dispose() {
-    _sparkleController.stop();
     _sparkleController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -57,120 +73,129 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    Color baseColor;
-    Color bgColor;
-    IconData stateIcon;
-    Color titleColor;
-    BoxBorder? border;
+    final isLocked = widget.level.state == LevelState.locked;
+
+    // 🎨 Màu tím–cam fintech
+    const gradient = LinearGradient(
+      colors: [AppTheme.tpPurple, AppTheme.tpOrange],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+
+    Color glowColor;
+    IconData icon;
+    String label = widget.level.title;
 
     switch (widget.level.state) {
       case LevelState.completed:
-        baseColor = Colors.greenAccent;
-        bgColor = Colors.green.shade400;
-        stateIcon = Icons.check;
-        titleColor = Colors.limeAccent;
-        border = Border.all(color: Colors.amberAccent, width: 4);
+        glowColor = Colors.greenAccent;
+        icon = Icons.check_circle_rounded;
         break;
       case LevelState.playable:
-        baseColor = Colors.orangeAccent;
-        bgColor = Colors.orange.shade400;
-        stateIcon = Icons.play_arrow;
-        titleColor = Colors.amberAccent;
-        border = Border.all(color: Colors.white, width: 3);
+        glowColor = AppTheme.tpOrange;
+        icon = Icons.play_arrow_rounded;
         break;
       default:
-        baseColor = Colors.grey;
-        bgColor = Colors.grey.shade600;
-        stateIcon = Icons.lock;
-        titleColor = Colors.grey.shade300;
+        glowColor = Colors.grey;
+        icon = Icons.lock;
+        break;
     }
 
-    final bool isLocked = widget.level.state == LevelState.locked;
-
     return GestureDetector(
-      onTap: isLocked ? null : widget.onTap,
+      onTap: isLocked
+          ? null
+          : () {
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: 140,
-            height: 140,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                if (!isLocked) ...[
+          ScaleTransition(
+            scale: widget.isCenter ? _pulseAnim : const AlwaysStoppedAnimation(1),
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: isLocked
+                    ? const LinearGradient(colors: [Colors.grey, Colors.black26])
+                    : gradient,
+                boxShadow: [
+                  BoxShadow(
+                    color: glowColor.withOpacity(0.6),
+                    blurRadius: widget.isCenter ? 30 : 15,
+                    spreadRadius: widget.isCenter ? 8 : 4,
+                  ),
+                ],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (!isLocked) ...[
+                    _buildSparkle(60, 1.0, 10, Colors.white.withOpacity(0.8)),
+                    _buildSparkle(80, -1.3, 14, Colors.yellowAccent.withOpacity(0.9)),
+                    _buildSparkle(90, 0.6, 12, Colors.orangeAccent.withOpacity(0.7)),
+                  ],
                   Container(
-                    width: 140,
-                    height: 140,
+                    width: 88,
+                    height: 88,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          baseColor.withOpacity(0.6),
-                          baseColor.withOpacity(0.0),
-                        ],
-                        stops: const [0.6, 1.0],
+                      color: Colors.white.withOpacity(0.1),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 2,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.2),
+                          blurRadius: 8,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Icon(icon, color: Colors.white, size: 42),
+                  ),
+                  Positioned(
+                    bottom: 10,
+                    right: 10,
+                    child: Icon(
+                      widget.level.state == LevelState.locked
+                          ? Icons.lock
+                          : Icons.star_rounded,
+                      color: widget.level.state == LevelState.locked
+                          ? Colors.white30
+                          : Colors.yellowAccent,
+                      size: 22,
                     ),
                   ),
-                  _buildSparkle(75, 1.0, 14, Colors.yellowAccent.withOpacity(0.9)),
-                  _buildSparkle(60, -1.5, 12, Colors.white.withOpacity(0.8)),
-                  _buildSparkle(85, 0.7, 16, Colors.orangeAccent.withOpacity(0.7)),
                 ],
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: bgColor,
-                    border: border,
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Text(
-                        widget.level.index.toString(),
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          shadows: [Shadow(color: Colors.black26, blurRadius: 4)],
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 6,
-                        right: 6,
-                        child: Icon(stateIcon, size: 22, color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           AnimatedOpacity(
-            opacity: widget.isCenter ? 1.0 : 0.7,
+            opacity: widget.isCenter ? 1 : 0.6,
             duration: const Duration(milliseconds: 400),
-            child: AnimatedScale(
-              scale: widget.isCenter ? 1.15 : 0.95,
-              duration: const Duration(seconds: 2),
-              curve: Curves.easeInOut,
-              child: Text(
-                widget.level.title,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: widget.isCenter ? 18 : 16,
-                  fontWeight: FontWeight.w900,
-                  color: titleColor,
-                  shadows: [
-                    const Shadow(offset: Offset(1, 1), blurRadius: 2, color: Colors.black87),
-                    const Shadow(offset: Offset(-1, -1), blurRadius: 2, color: Colors.black87),
-                    const Shadow(offset: Offset(1, -1), blurRadius: 2, color: Colors.black87),
-                    const Shadow(offset: Offset(-1, 1), blurRadius: 2, color: Colors.black87),
-                    Shadow(offset: Offset(0, 0), blurRadius: 8, color: titleColor.withOpacity(0.8)),
-                  ],
-                ),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: widget.isCenter ? 18 : 15,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                shadows: [
+                  Shadow(
+                    color: glowColor.withOpacity(0.8),
+                    blurRadius: 10,
+                  ),
+                  const Shadow(
+                    color: Colors.black54,
+                    blurRadius: 6,
+                    offset: Offset(1, 1),
+                  ),
+                ],
               ),
             ),
           ),
