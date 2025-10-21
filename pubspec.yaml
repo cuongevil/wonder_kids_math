@@ -1,8 +1,8 @@
 name: wonderkids.math
-description: Ứng dụng học toán cho bé
+description: WonderKids Vui Học Toán
 publish_to: "none" # chỉ dùng nội bộ
 
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.9.0
