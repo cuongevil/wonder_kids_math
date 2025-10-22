@@ -65,4 +65,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'wonder-kids-math.firebasestorage.app',
     iosBundleId: 'com.example.wonderKidsMath',
   );
+
 }
