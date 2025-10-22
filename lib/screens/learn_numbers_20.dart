@@ -25,7 +25,7 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
   List<dynamic> numbers = [];
   int currentIndex = 0;
   int totalStars = 0;
-  Set<int> learnedIndexes = {};
+  Map<String, bool> learnedIndexes = {}; // ✅ đổi sang Map<String, bool>
   bool isFinalRewardShown = false;
 
   final AudioPlayer _player = AudioPlayer();
@@ -42,9 +42,9 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
   @override
   void initState() {
     super.initState();
-    _initData(); // ✅ load và đánh dấu số đầu tiên
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _miniConfettiController = ConfettiController(duration: const Duration(seconds: 1));
+    _initData(); // ✅ load và đánh dấu số đầu tiên
   }
 
   /// 🔹 Load dữ liệu + tiến trình
@@ -60,7 +60,7 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
 
   Future<void> _loadNumbers() async {
     final String response = await rootBundle.loadString('assets/configs/numbers_20.json');
-    final data = await json.decode(response);
+    final data = json.decode(response);
     setState(() {
       numbers = data["numbers"];
     });
@@ -86,9 +86,10 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
   }
 
   void _markLearned(int index) async {
-    if (!learnedIndexes.contains(index)) {
+    final key = index.toString();
+    if (!learnedIndexes.containsKey(key)) {
       setState(() {
-        learnedIndexes.add(index);
+        learnedIndexes[key] = true;
         totalStars += 1;
       });
       await _saveProgress();
@@ -103,6 +104,7 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
         final currentIdx = levels.indexWhere(
               (lv) => lv.levelKey == levelKey || lv.route == "/learn_numbers_20",
         );
+
         if (currentIdx != -1) {
           levels[currentIdx].state = LevelState.completed;
           if (currentIdx + 1 < levels.length &&
@@ -337,10 +339,7 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
                     ),
                   ),
                   icon: Icon(Icons.volume_up, size: size.width * 0.07),
-                  label: Text(
-                    "Nghe",
-                    style: TextStyle(fontSize: size.width * 0.055),
-                  ),
+                  label: Text("Nghe", style: TextStyle(fontSize: size.width * 0.055)),
                   onPressed: () => _playAudio(item["audio"]),
                 ),
                 SizedBox(height: size.height * 0.04),
@@ -402,6 +401,7 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
   void dispose() {
     _confettiController.dispose();
     _miniConfettiController.dispose();
+    _player.dispose();
     super.dispose();
   }
 }

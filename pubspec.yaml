@@ -22,6 +22,13 @@ dependencies:
   lottie: ^3.1.0
   google_mobile_ads: ^6.0.0
   flutter_launcher_icons: ^0.14.4
+  firebase_core: ^4.1.1
+  firebase_auth: ^6.1.0
+  cloud_firestore: ^6.0.3
+  google_sign_in: ^6.2.0
+  firebase_analytics: ^12.0.3
+  firebase_storage: ^13.0.2
+  firebase_app_check: ^0.4.1
 
 dev_dependencies:
   flutter_test:

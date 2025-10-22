@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "142513370835",
+    "project_id": "wonder-kids-math",
+    "storage_bucket": "wonder-kids-math.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:142513370835:android:74b51404eac557eb5e8626",
+        "android_client_info": {
+          "package_name": "com.ctmd.wonderforge.wonderkids.math"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWfg-GQkCFO-cRWLkstp7h62WRL8oZjwo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

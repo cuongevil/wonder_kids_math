@@ -25,7 +25,7 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
   List<dynamic> numbers = [];
   int currentIndex = 0;
   int totalStars = 0;
-  Set<int> learnedIndexes = {};
+  Map<String, bool> learnedIndexes = {}; // ✅ đổi sang Map<String, bool>
   bool isFinalRewardShown = false;
 
   final AudioPlayer _player = AudioPlayer();
@@ -42,12 +42,12 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
   @override
   void initState() {
     super.initState();
-    _initData();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _miniConfettiController = ConfettiController(duration: const Duration(seconds: 1));
+    _initData();
   }
 
-  /// 🔹 Load dữ liệu và tự động cộng sao cho số đầu tiên nếu chưa có tiến trình
+  /// 🔹 Load dữ liệu và tiến trình
   Future<void> _initData() async {
     await _loadNumbers();
     await _loadProgress();
@@ -90,9 +90,10 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
   }
 
   void _markLearned(int index) async {
-    if (!learnedIndexes.contains(index)) {
+    final key = index.toString();
+    if (!learnedIndexes.containsKey(key)) {
       setState(() {
-        learnedIndexes.add(index);
+        learnedIndexes[key] = true;
         totalStars += 1;
       });
       await _saveProgress();
@@ -154,14 +155,13 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
       newIndex = random.nextInt(numbers.length);
     }
 
-    // âm thanh click vui nhộn (nếu có)
+    // âm thanh click vui nhộn
     try {
       await _player.play(AssetSource("audio/random.mp3"));
     } catch (_) {}
 
     setState(() => currentIndex = newIndex);
     _markLearned(currentIndex);
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       WowCard.triggerAnimation(context);
     });
@@ -353,7 +353,7 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
                   children: [
                     if (currentIndex > 0)
                       _circleButton(Icons.arrow_back, _prev, Colors.pinkAccent, size),
-                    _circleButton(Icons.shuffle, _random, Colors.amber, size), // 🎲 Random
+                    _circleButton(Icons.shuffle, _random, Colors.amber, size),
                     if (currentIndex < numbers.length - 1)
                       _circleButton(Icons.arrow_forward, _next, Colors.lightBlue, size),
                   ],
@@ -405,6 +405,7 @@ class _LearnNumbers50ScreenState extends State<LearnNumbers50Screen>
   void dispose() {
     _confettiController.dispose();
     _miniConfettiController.dispose();
+    _player.dispose();
     super.dispose();
   }
 }

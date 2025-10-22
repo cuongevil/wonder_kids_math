@@ -1,3 +1,7 @@
+/// 🎯 Cấu trúc Level — Wonder Kids Math 2025
+/// - Có 4 loại: start / topic / boss / end
+/// - Lưu progress: state, stars, total
+/// - Tương thích với Firebase và SharedPreferences
 enum LevelType { start, topic, boss, end }
 enum LevelState { locked, playable, completed }
 
@@ -28,6 +32,7 @@ class Level {
     this.total = 0,
   });
 
+  /// ✅ Convert object → JSON để lưu local / sync Firebase
   Map<String, dynamic> toJson() => {
     'index': index,
     'title': title,
@@ -39,6 +44,7 @@ class Level {
     'total': total,
   };
 
+  /// ✅ Convert JSON → object để đọc lại
   factory Level.fromJson(Map<String, dynamic> json) {
     return Level(
       index: json['index'],

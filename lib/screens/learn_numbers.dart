@@ -25,7 +25,7 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
   List<dynamic> numbers = [];
   int currentIndex = 0;
   int totalStars = 0;
-  Set<int> learnedIndexes = {};
+  Map<String, bool> learnedIndexes = {}; // ✅ đổi từ Set<int> sang Map<String, bool>
   bool isFinalRewardShown = false;
 
   final AudioPlayer _player = AudioPlayer();
@@ -42,13 +42,9 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
   @override
   void initState() {
     super.initState();
-    _initData(); // ✅ load và đánh dấu sao đầu tiên
-    _confettiController = ConfettiController(
-      duration: const Duration(seconds: 3),
-    );
-    _miniConfettiController = ConfettiController(
-      duration: const Duration(seconds: 1),
-    );
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _miniConfettiController = ConfettiController(duration: const Duration(seconds: 1));
+    _initData();
   }
 
   Future<void> _initData() async {
@@ -62,10 +58,8 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
   }
 
   Future<void> _loadNumbers() async {
-    final String response = await rootBundle.loadString(
-      'assets/configs/numbers.json',
-    );
-    final data = await json.decode(response);
+    final response = await rootBundle.loadString('assets/configs/numbers.json');
+    final data = json.decode(response);
     setState(() {
       numbers = data["numbers"];
     });
@@ -91,9 +85,10 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
   }
 
   void _markLearned(int index) async {
-    if (!learnedIndexes.contains(index)) {
+    final key = index.toString();
+    if (!learnedIndexes.containsKey(key)) {
       setState(() {
-        learnedIndexes.add(index);
+        learnedIndexes[key] = true;
         totalStars += 1;
       });
       await _saveProgress();
@@ -103,10 +98,12 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
       // 🎯 Khi học xong tất cả
       if (totalStars == numbers.length && !isFinalRewardShown) {
         _confettiController.play();
+
         final levels = await ProgressService.loadLevels();
         final currentIdx = levels.indexWhere(
-          (lv) => lv.levelKey == levelKey || lv.route == "/learn_numbers",
+              (lv) => lv.levelKey == levelKey || lv.route == "/learn_numbers",
         );
+
         if (currentIdx != -1) {
           levels[currentIdx].state = LevelState.completed;
           if (currentIdx + 1 < levels.length &&
@@ -115,6 +112,7 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
           }
           await ProgressService.saveLevels(levels);
         }
+
         await _setFinalRewardShown();
         _showRewardPopup(isFinal: true);
       }
@@ -126,7 +124,7 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
       setState(() => currentIndex++);
       _markLearned(currentIndex);
       WidgetsBinding.instance.addPostFrameCallback(
-        (_) => WowCard.triggerAnimation(context),
+            (_) => WowCard.triggerAnimation(context),
       );
     }
   }
@@ -136,7 +134,7 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
       setState(() => currentIndex--);
       _markLearned(currentIndex);
       WidgetsBinding.instance.addPostFrameCallback(
-        (_) => WowCard.triggerAnimation(context),
+            (_) => WowCard.triggerAnimation(context),
       );
     }
   }
@@ -160,7 +158,7 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
     _markLearned(currentIndex);
 
     WidgetsBinding.instance.addPostFrameCallback(
-      (_) => WowCard.triggerAnimation(context),
+          (_) => WowCard.triggerAnimation(context),
     );
   }
 
@@ -182,57 +180,55 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (_) {
-          return Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.all(30),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset(
-                  "assets/images/mascot/mascot_10.png",
-                  width: size.width * 0.5,
-                  height: size.width * 0.5,
-                  fit: BoxFit.contain,
-                ),
-                const SizedBox(height: 16),
-                ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: [Colors.orange, Colors.pink, Colors.purple],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ).createShader(bounds),
-                  child: Text(
-                    "🎉 Chúc mừng bé đã học xong!\n⭐ $totalStars / ${numbers.length} ⭐",
-                    style: TextStyle(
-                      fontSize: size.width * 0.08,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  "Bé thật tuyệt vời! Hãy khoe ngay với bố mẹ nhé 👏👏",
+        builder: (_) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(30),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                "assets/images/mascot/mascot_10.png",
+                width: size.width * 0.5,
+                height: size.width * 0.5,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(height: 16),
+              ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  colors: [Colors.orange, Colors.pink, Colors.purple],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ).createShader(bounds),
+                child: Text(
+                  "🎉 Chúc mừng bé đã học xong!\n⭐ $totalStars / ${numbers.length} ⭐",
                   style: TextStyle(
-                    fontSize: size.width * 0.05,
-                    fontWeight: FontWeight.w500,
+                    fontSize: size.width * 0.08,
+                    fontWeight: FontWeight.bold,
                     color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 8,
-                        color: Colors.black45,
-                        offset: Offset(2, 2),
-                      ),
-                    ],
                   ),
                   textAlign: TextAlign.center,
                 ),
-              ],
-            ),
-          );
-        },
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "Bé thật tuyệt vời! Hãy khoe ngay với bố mẹ nhé 👏👏",
+                style: TextStyle(
+                  fontSize: size.width * 0.05,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(
+                      blurRadius: 8,
+                      color: Colors.black45,
+                      offset: Offset(2, 2),
+                    ),
+                  ],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
       );
 
       Future.delayed(const Duration(seconds: 4), () {
@@ -245,35 +241,33 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.all(40),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 100, color: Colors.yellow),
-              const SizedBox(height: 16),
-              Text(
-                "Tuyệt vời! Bạn đã học ⭐ $totalStars / ${numbers.length}",
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(
-                      blurRadius: 10,
-                      color: Colors.black45,
-                      offset: Offset(2, 2),
-                    ),
-                  ],
-                ),
-                textAlign: TextAlign.center,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 100, color: Colors.yellow),
+            const SizedBox(height: 16),
+            Text(
+              "Tuyệt vời! Bạn đã học ⭐ $totalStars / ${numbers.length}",
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                shadows: [
+                  Shadow(
+                    blurRadius: 10,
+                    color: Colors.black45,
+                    offset: Offset(2, 2),
+                  ),
+                ],
               ),
-            ],
-          ),
-        );
-      },
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
 
     Future.delayed(const Duration(seconds: 2), () {
@@ -312,9 +306,7 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
                             value: (totalStars / numbers.length).clamp(0, 1),
                             minHeight: size.height * 0.04,
                             backgroundColor: Colors.grey[300],
-                            valueColor: const AlwaysStoppedAnimation(
-                              Colors.amber,
-                            ),
+                            valueColor: const AlwaysStoppedAnimation(Colors.amber),
                           ),
                         ),
                         Text(
@@ -354,20 +346,10 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     if (currentIndex > 0)
-                      _circleButton(
-                        Icons.arrow_back,
-                        _prev,
-                        Colors.pinkAccent,
-                        size,
-                      ),
+                      _circleButton(Icons.arrow_back, _prev, Colors.pinkAccent, size),
                     _circleButton(Icons.shuffle, _random, Colors.amber, size),
                     if (currentIndex < numbers.length - 1)
-                      _circleButton(
-                        Icons.arrow_forward,
-                        _next,
-                        Colors.lightBlue,
-                        size,
-                      ),
+                      _circleButton(Icons.arrow_forward, _next, Colors.lightBlue, size),
                   ],
                 ),
               ],
@@ -404,11 +386,11 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
   }
 
   Widget _circleButton(
-    IconData icon,
-    VoidCallback onTap,
-    Color color,
-    Size size,
-  ) {
+      IconData icon,
+      VoidCallback onTap,
+      Color color,
+      Size size,
+      ) {
     return Ink(
       decoration: ShapeDecoration(shape: const CircleBorder(), color: color),
       child: IconButton(
@@ -422,6 +404,7 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
   void dispose() {
     _confettiController.dispose();
     _miniConfettiController.dispose();
+    _player.dispose();
     super.dispose();
   }
 }

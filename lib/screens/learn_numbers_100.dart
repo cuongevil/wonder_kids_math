@@ -25,7 +25,7 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
   List<dynamic> numbers = [];
   int currentIndex = 0;
   int totalStars = 0;
-  Set<int> learnedIndexes = {};
+  Map<String, bool> learnedIndexes = {}; // ✅ Đổi từ Set<int> sang Map<String, bool>
   bool isFinalRewardShown = false;
 
   final AudioPlayer _player = AudioPlayer();
@@ -42,9 +42,9 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
   @override
   void initState() {
     super.initState();
-    _initData();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _miniConfettiController = ConfettiController(duration: const Duration(seconds: 1));
+    _initData();
   }
 
   Future<void> _initData() async {
@@ -85,9 +85,10 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
   }
 
   void _markLearned(int index) async {
-    if (!learnedIndexes.contains(index)) {
+    final key = index.toString(); // ✅ chuyển int sang String
+    if (!learnedIndexes.containsKey(key)) {
       setState(() {
-        learnedIndexes.add(index);
+        learnedIndexes[key] = true;
         totalStars += 1;
       });
       await _saveProgress();
@@ -146,7 +147,7 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
       newIndex = random.nextInt(numbers.length);
     }
 
-    // âm thanh click vui nhộn (nếu có)
+    // âm thanh click vui nhộn
     try {
       await _player.play(AssetSource("audio/random.mp3"));
     } catch (_) {}
@@ -172,6 +173,7 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
       try {
         await _player.play(AssetSource("audio/victory.mp3"));
       } catch (_) {}
+
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -389,6 +391,7 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
   void dispose() {
     _confettiController.dispose();
     _miniConfettiController.dispose();
+    _player.dispose();
     super.dispose();
   }
 }
