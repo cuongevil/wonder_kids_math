@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:wonderkids.math/themes/app_theme.dart';
+import '../themes/app_theme.dart';
 
 class AnimatedBottomNavBar extends StatefulWidget {
   final int currentIndex;
@@ -14,10 +14,10 @@ class AnimatedBottomNavBar extends StatefulWidget {
   });
 
   @override
-  State<AnimatedBottomNavBar> createState() => _AnimatedBottomNavBarState();
+  State<AnimatedBottomNavBar> createState() => AnimatedBottomNavBarState();
 }
 
-class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
+class AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
     with SingleTickerProviderStateMixin {
   bool _visible = true;
 
@@ -27,11 +27,13 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
   @override
   Widget build(BuildContext context) {
     return AnimatedSlide(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 400),
       offset: _visible ? Offset.zero : const Offset(0, 2),
+      curve: Curves.easeOutCubic,
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 300),
         opacity: _visible ? 1 : 0,
+        curve: Curves.easeOut,
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
@@ -58,7 +60,8 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
                   builder: (_, scale, child) => Transform.scale(
                     scale: scale,
                     child: ShaderMask(
-                      shaderCallback: (rect) => AppTheme.primaryGradient.createShader(rect),
+                      shaderCallback: (rect) =>
+                          AppTheme.primaryGradient.createShader(rect),
                       child: Icon(
                         widget.icons[index],
                         color: isActive ? Colors.white : Colors.white60,

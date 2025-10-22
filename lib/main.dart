@@ -34,7 +34,7 @@ void main() {
 /// - Gradient tím–cam mượt
 /// - AppBar mờ glass
 /// - Hiệu ứng fade khi chuyển cảnh
-/// - BottomNav icon scale animation
+/// - BottomNav icon scale animation + auto hide khi scroll map
 class WonderKidsMathApp extends StatefulWidget {
   const WonderKidsMathApp({super.key});
 
@@ -44,24 +44,36 @@ class WonderKidsMathApp extends StatefulWidget {
 
 class _WonderKidsMathAppState extends State<WonderKidsMathApp> {
   int _currentIndex = 0;
-
-  final List<Widget> _screens = const [
-    MapScreen(),
-    LeaderboardScreen(),
-    ProfileScreen(),
-  ];
+  final GlobalKey<AnimatedBottomNavBarState> _bottomNavKey =
+  GlobalKey<AnimatedBottomNavBarState>();
 
   @override
   Widget build(BuildContext context) {
+    final List<Widget> screens = [
+      // 👇 MapScreen gửi callback ẩn/hiện bar
+      MapScreen(
+        onScrollDirectionChanged: (isHidden) {
+          if (isHidden) {
+            _bottomNavKey.currentState?.hide();
+          } else {
+            _bottomNavKey.currentState?.show();
+          }
+        },
+      ),
+      const LeaderboardScreen(),
+      const ProfileScreen(),
+    ];
+
     return MaterialApp(
       title: 'Wonder Kids Vui Học Toán',
       debugShowCheckedModeBanner: false,
       navigatorObservers: [appRouteObserver],
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
+      theme: AppTheme.light, // 🌞 Tone sáng
+      darkTheme: AppTheme.dark, // 🌙 Tone tối fintech
+      themeMode: ThemeMode.system, // Tự đổi theo hệ thống
+
+      // 🌀 Custom fade route transition
       onGenerateRoute: (settings) {
-        final name = settings.name;
         final routes = {
           LevelDetail.routeName: (_) => const LevelDetail(),
           '/badges': (_) => const BadgeCollectionScreen(),
@@ -83,26 +95,38 @@ class _WonderKidsMathAppState extends State<WonderKidsMathApp> {
           '/game_final_boss': (_) => const GameFinalBossScreen(),
         };
 
-        final builder = routes[name];
+        final builder = routes[settings.name];
         if (builder != null) {
           return CustomPageRoute(child: builder(context));
         }
         return null;
       },
+
+      // 🌟 Layout chính có BottomNav glass + animation scale
       home: Scaffold(
         extendBody: true,
         body: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: _screens[_currentIndex],
+          duration: const Duration(milliseconds: 400),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          child: screens[_currentIndex],
         ),
-        bottomNavigationBar: AnimatedBottomNavBar(
-          currentIndex: _currentIndex,
-          onTap: (i) => setState(() => _currentIndex = i),
-          icons: const [
-            Icons.map_rounded,
-            Icons.leaderboard_rounded,
-            Icons.person_rounded,
-          ],
+
+        // 🔹 Bottom Navigation Bar — glass blur + auto hide
+        bottomNavigationBar: ClipRRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: AnimatedBottomNavBar(
+              key: _bottomNavKey,
+              currentIndex: _currentIndex,
+              onTap: (i) => setState(() => _currentIndex = i),
+              icons: const [
+                Icons.map_rounded,
+                Icons.leaderboard_rounded,
+                Icons.person_rounded,
+              ],
+            ),
+          ),
         ),
       ),
     );
