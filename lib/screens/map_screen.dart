@@ -1,16 +1,15 @@
 import 'dart:math';
-
+import 'dart:ui';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
-
+import 'package:flutter/services.dart';
 import '../models/level.dart';
 import '../services/progress_service.dart';
 import '../utils/route_observer.dart';
-import '../widgets/app_scaffold.dart';
 import '../widgets/level_node.dart';
-import '../widgets/map_background.dart';
 import 'level_detail.dart';
 
+/// 💜 MapScreen — TPBank Fintech Glow Style 2025 + Light/Dark Mode
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
 
@@ -31,26 +30,16 @@ class _MapScreenState extends State<MapScreen>
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    _confettiController = ConfettiController(
-      duration: const Duration(seconds: 2),
-    );
-
+    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
     _bounceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
       lowerBound: 0.95,
       upperBound: 1.05,
-    );
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _bounceController.repeat(reverse: true);
-    });
+    )..repeat(reverse: true);
 
     _init();
-
-    _scrollController.addListener(() {
-      if (mounted) setState(() {});
-    });
+    _scrollController.addListener(() => setState(() {}));
   }
 
   @override
@@ -62,24 +51,18 @@ class _MapScreenState extends State<MapScreen>
   @override
   void dispose() {
     appRouteObserver.unsubscribe(this);
-    _bounceController.stop();
-    _confettiController.stop();
-    _scrollController.dispose();
     _bounceController.dispose();
     _confettiController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  /// ✅ Khi quay lại từ màn hình khác
   @override
-  void didPopNext() {
-    _refreshLevels();
-  }
+  void didPopNext() => _refreshLevels();
 
-  /// Khởi tạo dữ liệu ban đầu
+  // 🔹 Khởi tạo dữ liệu ban đầu
   Future<void> _init() async {
     levels = await ProgressService.ensureDefaultLevels(_defaultLevels);
-
     for (var lv in levels) {
       if (lv.levelKey != null) {
         lv.stars = await ProgressService.getStars(lv.levelKey!);
@@ -87,10 +70,7 @@ class _MapScreenState extends State<MapScreen>
       }
     }
 
-    // Tìm level playable đầu tiên để focus
-    final firstPlayableIndex = levels.indexWhere(
-      (e) => e.state == LevelState.playable,
-    );
+    final firstPlayableIndex = levels.indexWhere((e) => e.state == LevelState.playable);
 
     if (mounted) {
       setState(() {});
@@ -98,22 +78,18 @@ class _MapScreenState extends State<MapScreen>
         if (_scrollController.hasClients && firstPlayableIndex != -1) {
           const spacing = 240.0;
           final screenH = MediaQuery.of(context).size.height;
-          final topPadding =
-              kToolbarHeight + MediaQuery.of(context).padding.top + 16;
-          final targetOffset =
-              firstPlayableIndex * spacing -
-              screenH / 2 +
-              spacing / 2 +
-              topPadding;
-          _scrollController.jumpTo(
+          final topPadding = kToolbarHeight + MediaQuery.of(context).padding.top + 16;
+          final targetOffset = firstPlayableIndex * spacing - screenH / 2 + spacing / 2 + topPadding;
+          _scrollController.animateTo(
             targetOffset.clamp(0, _scrollController.position.maxScrollExtent),
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeOutCubic,
           );
         }
       });
     }
   }
 
-  /// ✅ Làm mới level khi quay lại map
   Future<void> _refreshLevels() async {
     levels = await ProgressService.ensureDefaultLevels(_defaultLevels);
     for (var lv in levels) {
@@ -125,180 +101,52 @@ class _MapScreenState extends State<MapScreen>
     if (mounted) setState(() {});
   }
 
-  /// Tổng số bài trong từng level
   Future<int> _getTotalForLevel(String key) async {
-    switch (key) {
-      case "0_10":
-        return 11;
-      case "0_20":
-        return 21;
-      case "0_50":
-        return 51;
-      case "0_100":
-        return 101;
-      case "compare":
-        return 10;
-      case "addition10":
-        return 10;
-      case "subtraction10":
-        return 10;
-      case "addition20":
-        return 10;
-      case "subtraction20":
-        return 10;
-      case "addition50":
-        return 10;
-      case "subtraction50":
-        return 10;
-      case "addition100":
-        return 10;
-      case "subtraction100":
-        return 10;
-      case "shapes":
-        return 12;
-      case "measure":
-        return 10;
-      case "final_boss":
-        return 20;
-      default:
-        return 0;
-    }
+    const totals = {
+      "0_10": 11,
+      "0_20": 21,
+      "0_50": 51,
+      "0_100": 101,
+      "compare": 10,
+      "addition10": 10,
+      "subtraction10": 10,
+      "addition20": 10,
+      "subtraction20": 10,
+      "addition50": 10,
+      "subtraction50": 10,
+      "addition100": 10,
+      "subtraction100": 10,
+      "shapes": 12,
+      "measure": 10,
+      "final_boss": 20,
+    };
+    return totals[key] ?? 0;
   }
 
-  /// Danh sách level mặc định
-  List<Level> _defaultLevels() {
-    return [
-      Level(
-        index: 0,
-        title: 'Bắt đầu',
-        type: LevelType.start,
-        state: LevelState.playable,
-        levelKey: "start",
-      ),
-      Level(
-        index: 1,
-        title: 'Số 0–10',
-        type: LevelType.topic,
-        route: '/learn_numbers',
-        levelKey: "0_10",
-      ),
-      Level(
-        index: 2,
-        title: 'Số 0–20',
-        type: LevelType.topic,
-        route: '/learn_numbers_20',
-        levelKey: "0_20",
-      ),
-      Level(
-        index: 3,
-        title: 'Số 0–50',
-        type: LevelType.topic,
-        route: '/learn_numbers_50',
-        levelKey: "0_50",
-      ),
-      Level(
-        index: 4,
-        title: 'Số 0–100',
-        type: LevelType.topic,
-        route: '/learn_numbers_100',
-        levelKey: "0_100",
-      ),
-      Level(
-        index: 5,
-        title: 'So Sánh',
-        type: LevelType.topic,
-        route: '/game_compare',
-        levelKey: "compare",
-      ),
-      Level(
-        index: 6,
-        title: 'Cộng ≤10',
-        type: LevelType.topic,
-        route: '/game_addition10',
-        levelKey: "addition10",
-      ),
-      Level(
-        index: 7,
-        title: 'Trừ ≤10',
-        type: LevelType.topic,
-        route: '/game_subtraction10',
-        levelKey: "subtraction10",
-      ),
-      Level(
-        index: 8,
-        title: 'Cộng ≤20',
-        type: LevelType.topic,
-        route: '/game_addition20',
-        levelKey: "addition20",
-      ),
-      Level(
-        index: 9,
-        title: 'Trừ ≤20',
-        type: LevelType.topic,
-        route: '/game_subtraction20',
-        levelKey: "subtraction20",
-      ),
-      Level(
-        index: 10,
-        title: 'Cộng ≤50',
-        type: LevelType.topic,
-        route: '/game_addition50',
-        levelKey: "addition50",
-      ),
-      Level(
-        index: 11,
-        title: 'Trừ ≤50',
-        type: LevelType.topic,
-        route: '/game_subtraction50',
-        levelKey: "subtraction50",
-      ),
-      Level(
-        index: 12,
-        title: 'Cộng ≤100',
-        type: LevelType.topic,
-        route: '/game_addition100',
-        levelKey: "addition100",
-      ),
-      Level(
-        index: 13,
-        title: 'Trừ ≤100',
-        type: LevelType.topic,
-        route: '/game_subtraction100',
-        levelKey: "subtraction100",
-      ),
-      Level(
-        index: 14,
-        title: 'Hình Học',
-        type: LevelType.topic,
-        route: '/game_shapes',
-        levelKey: "shapes",
-      ),
-      Level(
-        index: 15,
-        title: 'Đo Lường',
-        type: LevelType.topic,
-        route: '/game_measure_time',
-        levelKey: "measure",
-      ),
-      Level(
-        index: 16,
-        title: 'Tổng hợp',
-        type: LevelType.boss,
-        route: '/game_final_boss',
-        levelKey: "final_boss",
-      ),
-    ];
-  }
+  List<Level> _defaultLevels() => [
+    Level(index: 0, title: 'Bắt đầu', type: LevelType.start, state: LevelState.playable, levelKey: "start"),
+    Level(index: 1, title: 'Số 0–10', type: LevelType.topic, route: '/learn_numbers', levelKey: "0_10"),
+    Level(index: 2, title: 'Số 0–20', type: LevelType.topic, route: '/learn_numbers_20', levelKey: "0_20"),
+    Level(index: 3, title: 'Số 0–50', type: LevelType.topic, route: '/learn_numbers_50', levelKey: "0_50"),
+    Level(index: 4, title: 'Số 0–100', type: LevelType.topic, route: '/learn_numbers_100', levelKey: "0_100"),
+    Level(index: 5, title: 'So Sánh', type: LevelType.topic, route: '/game_compare', levelKey: "compare"),
+    Level(index: 6, title: 'Cộng ≤10', type: LevelType.topic, route: '/game_addition10', levelKey: "addition10"),
+    Level(index: 7, title: 'Trừ ≤10', type: LevelType.topic, route: '/game_subtraction10', levelKey: "subtraction10"),
+    Level(index: 8, title: 'Cộng ≤20', type: LevelType.topic, route: '/game_addition20', levelKey: "addition20"),
+    Level(index: 9, title: 'Trừ ≤20', type: LevelType.topic, route: '/game_subtraction20', levelKey: "subtraction20"),
+    Level(index: 10, title: 'Cộng ≤50', type: LevelType.topic, route: '/game_addition50', levelKey: "addition50"),
+    Level(index: 11, title: 'Trừ ≤50', type: LevelType.topic, route: '/game_subtraction50', levelKey: "subtraction50"),
+    Level(index: 12, title: 'Cộng ≤100', type: LevelType.topic, route: '/game_addition100', levelKey: "addition100"),
+    Level(index: 13, title: 'Trừ ≤100', type: LevelType.topic, route: '/game_subtraction100', levelKey: "subtraction100"),
+    Level(index: 14, title: 'Hình Học', type: LevelType.topic, route: '/game_shapes', levelKey: "shapes"),
+    Level(index: 15, title: 'Đo Lường', type: LevelType.topic, route: '/game_measure_time', levelKey: "measure"),
+    Level(index: 16, title: 'Tổng hợp', type: LevelType.boss, route: '/game_final_boss', levelKey: "final_boss"),
+  ];
 
-  /// Mở 1 level
   void _openLevel(Level lv) async {
     if (lv.state == LevelState.locked) return;
-    await Navigator.pushNamed(
-      context,
-      lv.route ?? LevelDetail.routeName,
-      arguments: lv.index,
-    );
-    // 🔹 Khi quay lại, load lại danh sách
+    HapticFeedback.lightImpact();
+    await Navigator.pushNamed(context, lv.route ?? LevelDetail.routeName, arguments: lv.index);
     await _refreshLevels();
   }
 
@@ -308,33 +156,66 @@ class _MapScreenState extends State<MapScreen>
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark ||
+        DateTime.now().hour >= 18 ||
+        DateTime.now().hour < 6;
+
     const double spacing = 240;
     const double nodeSize = 100;
-    const double maxScale = 1.1;
     final screenW = MediaQuery.of(context).size.width;
     final screenH = MediaQuery.of(context).size.height;
     final totalHeight = levels.length * spacing + 240;
+    final safeAmplitude = (screenW - nodeSize * 1.5) / 2 * 0.3;
+    final double topPadding = kToolbarHeight + MediaQuery.of(context).padding.top + 16;
 
-    const extraGlow = 40.0;
-    final maxNodeSize = nodeSize * maxScale + extraGlow;
-    final safeAmplitude = (screenW - maxNodeSize) / 2 * 0.3;
-    const double minMargin = 8.0;
-    const double bias = -40.0;
-    final double topPadding =
-        kToolbarHeight + MediaQuery.of(context).padding.top + 16;
+    // 🎨 Gradient cho Light/Dark Mode
+    final List<Color> gradientColors = isDark
+        ? [const Color(0xFF1E1E2E), const Color(0xFF5E2CED), const Color(0xFFA58CFF)]
+        : [const Color(0xFF5E2CED), const Color(0xFFA58CFF), const Color(0xFFFF8B00)];
 
-    return AppScaffold(
-      title: "Học toán",
-      levels: levels,
-      onLevelsChanged: (updated) => setState(() => levels = updated),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: MapBackground(
-              scrollController: _scrollController,
-              currentLevel: mascotPosition,
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white.withOpacity(0.05),
+        flexibleSpace: ClipRRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            child: Container(color: Colors.white.withOpacity(0.05)),
+          ),
+        ),
+        title: ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
+          ).createShader(bounds),
+          child: Text(
+            "Học Toán",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black,
             ),
           ),
+        ),
+        centerTitle: true,
+      ),
+      body: Stack(
+        children: [
+          // 🌈 Gradient nền fintech
+          Positioned.fill(
+            child: AnimatedContainer(
+              duration: const Duration(seconds: 2),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: gradientColors,
+                ),
+              ),
+            ),
+          ),
+
+          // 💫 Các node level
           SingleChildScrollView(
             controller: _scrollController,
             child: SizedBox(
@@ -350,46 +231,49 @@ class _MapScreenState extends State<MapScreen>
                             ? _scrollController.offset + screenH / 2
                             : screenH / 2;
                         final distance = (levelTop - centerY).abs();
-                        final scale = (1.1 - (distance / screenH)).clamp(
-                          0.8,
-                          1.1,
-                        );
-                        final opacity = (1.2 - (distance / (screenH * 0.7)))
-                            .clamp(0.4, 1.0);
+                        final scale = (1.1 - (distance / screenH)).clamp(0.8, 1.1);
+                        final opacity = (1.2 - (distance / (screenH * 0.7))).clamp(0.4, 1.0);
                         final isCenter = distance < 50;
 
-                        Widget node = LevelNode(
-                          level: levels[i],
+                        Widget node = GestureDetector(
                           onTap: () => _openLevel(levels[i]),
-                          isCenter: isCenter,
-                          isNight:
-                              DateTime.now().hour >= 18 ||
-                              DateTime.now().hour < 6,
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 300),
+                            opacity: opacity,
+                            child: LevelNode(
+                              level: levels[i],
+                              onTap: () => _openLevel(levels[i]),
+                              isCenter: isCenter,
+                              isNight: isDark,
+                            ),
+                          ),
                         );
 
                         if (isCenter) {
-                          node = ScaleTransition(
-                            scale: _bounceController,
-                            child: node,
+                          node = Container(
+                            decoration: BoxDecoration(
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF5E2CED).withOpacity(0.5),
+                                  blurRadius: 40,
+                                  spreadRadius: -10,
+                                ),
+                                BoxShadow(
+                                  color: const Color(0xFFFF8B00).withOpacity(0.3),
+                                  blurRadius: 20,
+                                  spreadRadius: -5,
+                                ),
+                              ],
+                            ),
+                            child: ScaleTransition(scale: _bounceController, child: node),
                           );
                         }
 
-                        double rawLeft =
-                            (screenW - nodeSize) / 2 +
-                            sin(i * 0.8) * safeAmplitude +
-                            bias;
-                        double left = rawLeft.clamp(
-                          minMargin,
-                          screenW - nodeSize - minMargin,
-                        );
-
+                        final rawLeft = (screenW - nodeSize) / 2 + sin(i * 0.8) * safeAmplitude - 40;
                         return Positioned(
                           top: levelTop,
-                          left: left,
-                          child: Transform.scale(
-                            scale: scale,
-                            child: Opacity(opacity: opacity, child: node),
-                          ),
+                          left: rawLeft,
+                          child: Transform.scale(scale: scale, child: node),
                         );
                       },
                     ),
@@ -397,16 +281,18 @@ class _MapScreenState extends State<MapScreen>
               ),
             ),
           ),
+
+          // 🎉 Confetti
           Align(
             alignment: Alignment.topCenter,
             child: ConfettiWidget(
               confettiController: _confettiController,
               blastDirectionality: BlastDirectionality.explosive,
               colors: const [
-                Colors.pink,
-                Colors.blue,
-                Colors.yellow,
-                Colors.green,
+                Color(0xFF5E2CED),
+                Color(0xFFA58CFF),
+                Color(0xFFFF8B00),
+                Colors.white,
               ],
             ),
           ),
