@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/level.dart';
 
-/// 🧮 ProgressService v3.6 — Quản lý tiến độ học + đồng bộ cloud
+/// 🧮 ProgressService v3.7 — Quản lý tiến độ học + mở khóa level kế tiếp + đồng bộ cloud
 /// ✅ Local (SharedPreferences)
 /// ✅ Cloud (Firebase Firestore)
 /// ✅ Hỗ trợ lưu bài học con (learnedIndexes)
@@ -61,18 +61,48 @@ class ProgressService {
     await _syncToFirebase(jsonList);
   }
 
-  /// ✅ Đánh dấu level đã hoàn thành, mở khóa level kế tiếp
+  /// ✅ Đánh dấu level đã hoàn thành (và mở khóa level kế tiếp)
   static Future<void> markLevelCompleted(String levelKey) async {
     final prefs = await SharedPreferences.getInstance();
     final jsonStr = prefs.getString(_progressKey);
     if (jsonStr == null) return;
 
     final List<dynamic> jsonList = jsonDecode(jsonStr);
+
+    // 🔹 Tìm và đánh dấu completed
     for (var i = 0; i < jsonList.length; i++) {
       if (jsonList[i]['levelKey'] == levelKey) {
         jsonList[i]['state'] = 'completed';
-        if (i + 1 < jsonList.length) jsonList[i + 1]['state'] = 'playable';
         break;
+      }
+    }
+
+    await prefs.setString(_progressKey, jsonEncode(jsonList));
+    await _syncToFirebase(jsonList);
+
+    // 🔹 Sau khi hoàn thành, mở khóa kế tiếp
+    await unlockNextLevel(levelKey);
+  }
+
+  /// ✅ Mở khóa level kế tiếp (kể cả khi currentKey là "start")
+  static Future<void> unlockNextLevel(String currentKey) async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonStr = prefs.getString(_progressKey);
+    if (jsonStr == null) return;
+
+    final List<dynamic> jsonList = jsonDecode(jsonStr);
+    final index = jsonList.indexWhere((e) => e['levelKey'] == currentKey);
+
+    if (index != -1 && index + 1 < jsonList.length) {
+      // Mở khóa level kế tiếp nếu chưa hoàn thành
+      if (jsonList[index + 1]['state'] != 'completed') {
+        jsonList[index + 1]['state'] = 'playable';
+      }
+    }
+    // Nếu là "start" mà chưa có trong danh sách → mở level đầu tiên
+    else if (currentKey == 'start' && jsonList.isNotEmpty) {
+      if (jsonList.first['state'] != 'completed') {
+        jsonList.first['state'] = 'playable';
       }
     }
 
@@ -81,7 +111,8 @@ class ProgressService {
   }
 
   /// ✅ Lưu danh sách chỉ số bài đã học (learnedIndexes)
-  static Future<void> saveLearnedIndexes(String levelKey, Map<String, bool> learnedIndexes) async {
+  static Future<void> saveLearnedIndexes(
+      String levelKey, Map<String, bool> learnedIndexes) async {
     final prefs = await SharedPreferences.getInstance();
     final key = '$_learnedPrefix$levelKey';
     await prefs.setString(key, jsonEncode(learnedIndexes));
@@ -114,7 +145,10 @@ class ProgressService {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      await FirebaseFirestore.instance.collection('wonderkids_progress').doc(user.uid).delete();
+      await FirebaseFirestore.instance
+          .collection('wonderkids_progress')
+          .doc(user.uid)
+          .delete();
     }
   }
 
@@ -130,7 +164,8 @@ class ProgressService {
     if (user == null) return;
 
     final prefs = await SharedPreferences.getInstance();
-    final learnedKeys = prefs.getKeys().where((k) => k.startsWith(_learnedPrefix));
+    final learnedKeys =
+    prefs.getKeys().where((k) => k.startsWith(_learnedPrefix));
     final learnedData = <String, Map<String, bool>>{};
 
     for (final k in learnedKeys) {
@@ -142,7 +177,10 @@ class ProgressService {
     }
 
     final now = DateTime.now().toIso8601String();
-    await FirebaseFirestore.instance.collection('wonderkids_progress').doc(user.uid).set({
+    await FirebaseFirestore.instance
+        .collection('wonderkids_progress')
+        .doc(user.uid)
+        .set({
       'levels': jsonList,
       'learned': learnedData,
       'updated': now,
@@ -152,7 +190,8 @@ class ProgressService {
   }
 
   /// ✅ Đồng bộ riêng từng learnedIndexes (khi học xong 1 bài nhỏ)
-  static Future<void> _syncLearnedIndexesToFirebase(String levelKey, Map<String, bool> data) async {
+  static Future<void> _syncLearnedIndexesToFirebase(
+      String levelKey, Map<String, bool> data) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -174,7 +213,10 @@ class ProgressService {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return false;
 
-    final doc = await FirebaseFirestore.instance.collection('wonderkids_progress').doc(user.uid).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('wonderkids_progress')
+        .doc(user.uid)
+        .get();
     if (!doc.exists) return false;
 
     final data = doc.data();
@@ -182,12 +224,10 @@ class ProgressService {
 
     final prefs = await SharedPreferences.getInstance();
 
-    // 🔹 restore levels
     if (data['levels'] != null) {
       await prefs.setString(_progressKey, jsonEncode(data['levels']));
     }
 
-    // 🔹 restore learnedIndexes
     if (data['learned'] != null) {
       final learned = Map<String, dynamic>.from(data['learned']);
       for (final entry in learned.entries) {
@@ -196,7 +236,6 @@ class ProgressService {
       }
     }
 
-    // 🔹 update sync time
     final updated = data['updated'] ?? DateTime.now().toIso8601String();
     await prefs.setString(_lastSyncKey, updated);
     return true;
@@ -209,7 +248,7 @@ class ProgressService {
     await prefs.setString(_progressKey, jsonEncode(jsonList));
   }
 
-  // 🧩 Backward-compatible alias methods (cho code cũ)
+  // 🧩 Alias methods (cho code cũ)
   static Future<void> saveLevels(List<Level> levels) async => _saveProgress(levels);
 
   static Future<List<Level>> loadLevels() async {

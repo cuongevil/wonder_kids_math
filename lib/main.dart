@@ -1,11 +1,11 @@
 import 'dart:ui';
 
-// 🔥 Firebase core & config
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-// 👇 Import các màn hình hiện có
 import 'package:wonderkids.math/screens/badge_collection_screen.dart';
 import 'package:wonderkids.math/screens/leaderboard_screen.dart';
 import 'package:wonderkids.math/screens/level_detail.dart';
@@ -19,7 +19,6 @@ import 'package:wonderkids.math/widgets/animated_bottom_nav_bar.dart';
 
 import 'app_open_ad_manager.dart';
 import 'firebase_options.dart';
-import 'package:flutter/foundation.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -67,14 +66,14 @@ Future<void> _initAdMob() async {
 /// ✅ Bật Firebase App Check (Play Integrity trên release)
 Future<void> _initAppCheck() async {
   try {
-    // await FirebaseAppCheck.instance.activate(
-    //   androidProvider: kDebugMode
-    //       ? AndroidProvider.debug
-    //       : AndroidProvider.playIntegrity,
-    //   appleProvider: kDebugMode
-    //       ? AppleProvider.debug
-    //       : AppleProvider.deviceCheck,
-    // );
+    await FirebaseAppCheck.instance.activate(
+      androidProvider: kDebugMode
+          ? AndroidProvider.debug
+          : AndroidProvider.playIntegrity,
+      appleProvider: kDebugMode
+          ? AppleProvider.debug
+          : AppleProvider.deviceCheck,
+    );
     debugPrint('🔒 [AppCheck] Activated successfully');
   } catch (e, st) {
     debugPrint('⚠️ [AppCheck] Activation failed: $e\n$st');

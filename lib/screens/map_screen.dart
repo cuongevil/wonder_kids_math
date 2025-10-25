@@ -50,11 +50,9 @@ class _MapScreenState extends State<MapScreen>
       final diff = offset - _lastOffset;
 
       if (diff > 10 && !_isNavHidden) {
-        // cuộn lên → ẩn
         widget.onScrollDirectionChanged?.call(true);
         _isNavHidden = true;
       } else if (diff < -10 && _isNavHidden) {
-        // cuộn xuống → hiện
         widget.onScrollDirectionChanged?.call(false);
         _isNavHidden = false;
       }
@@ -258,9 +256,18 @@ class _MapScreenState extends State<MapScreen>
   void _openLevel(Level lv) async {
     if (lv.state == LevelState.locked) return;
     HapticFeedback.lightImpact();
-    await Navigator.pushNamed(context, lv.route ?? LevelDetail.routeName,
-        arguments: lv.index);
-    await _refreshLevels();
+
+    // ✅ Luôn truyền object Level thay vì int
+    final bool? completed = await Navigator.pushNamed(
+      context,
+      lv.route ?? LevelDetail.routeName,
+      arguments: lv,
+    ) as bool?;
+
+    if (completed == true) {
+      await _refreshLevels();
+      _confettiController.play();
+    }
   }
 
   @override
@@ -282,7 +289,6 @@ class _MapScreenState extends State<MapScreen>
     final double topPadding =
         kToolbarHeight + MediaQuery.of(context).padding.top + 16;
 
-    // 🎨 Gradient cho Light/Dark Mode
     final List<Color> gradientColors = isDark
         ? [const Color(0xFF1E1E2E), const Color(0xFF5E2CED), const Color(0xFFA58CFF)]
         : [const Color(0xFF5E2CED), const Color(0xFFA58CFF), const Color(0xFFFF8B00)];
