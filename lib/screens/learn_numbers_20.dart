@@ -47,6 +47,7 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
     await _loadNumbers();
     await _loadProgress();
 
+    // ✅ Chỉ đánh dấu khi chưa có dữ liệu
     if (numbers.isNotEmpty && learnedIndexes.isEmpty) {
       _markLearned(0, playReward: false);
     }
@@ -81,27 +82,16 @@ class _LearnNumbers20ScreenState extends State<LearnNumbers20Screen>
   Future<void> _markLearned(int index, {bool playReward = true}) async {
     final key = index.toString();
 
-    bool isNew = false;
-    if (!learnedIndexes.containsKey(key)) {
-      learnedIndexes[key] = true;
-      totalStars = learnedIndexes.length;
-      isNew = true;
-      setState(() {});
-    }
+    if (learnedIndexes.containsKey(key)) return; // ✅ tránh trùng
+    learnedIndexes[key] = true;
+    totalStars = learnedIndexes.length;
+    setState(() {});
+    unawaited(_saveProgress());
 
-    final totalLearned = learnedIndexes.length;
-    final totalRequired = numbers.length;
+    if (playReward) _miniConfettiController.play();
 
-    // 🎯 Khi học đủ toàn bộ
-    if (totalLearned >= totalRequired && !isFinalRewardShown) {
+    if (learnedIndexes.length >= numbers.length && !isFinalRewardShown) {
       await _onAllLearned();
-      return;
-    }
-
-    // 🎉 Mini confetti
-    if (isNew) {
-      unawaited(_saveProgress());
-      if (playReward) _miniConfettiController.play();
     }
   }
 

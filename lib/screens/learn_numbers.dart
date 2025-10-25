@@ -46,6 +46,8 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
   Future<void> _initData() async {
     await _loadNumbers();
     await _loadProgress();
+
+    // ✅ Chỉ đánh dấu học số đầu tiên khi chưa có dữ liệu
     if (numbers.isNotEmpty && learnedIndexes.isEmpty) {
       _markLearned(0, playReward: false);
     }
@@ -77,43 +79,32 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
     setState(() => isFinalRewardShown = true);
   }
 
-  /// ✅ Đánh dấu 1 số đã học
+  /// ✅ Đánh dấu học 1 số (chỉ 1 lần)
   Future<void> _markLearned(int index, {bool playReward = true}) async {
     final key = index.toString();
 
-    bool isNew = false;
-    if (!learnedIndexes.containsKey(key)) {
-      learnedIndexes[key] = true;
-      totalStars = learnedIndexes.length;
-      isNew = true;
-      setState(() {});
-    }
+    if (learnedIndexes.containsKey(key)) return;
+    learnedIndexes[key] = true;
+    totalStars = learnedIndexes.length;
+    setState(() {});
+    unawaited(_saveProgress());
 
-    final totalLearned = learnedIndexes.length;
-    final totalRequired = numbers.length;
-    debugPrint("📘 Đã học $totalLearned / $totalRequired ($levelKey)");
+    if (playReward) _miniConfettiController.play();
 
-    // 🎯 Khi học đủ toàn bộ → gọi ngay (chỉ 1 lần duy nhất)
-    if (totalLearned >= totalRequired && !isFinalRewardShown) {
+    // 🎯 Nếu đã học xong toàn bộ
+    if (learnedIndexes.length >= numbers.length && !isFinalRewardShown) {
       await _onAllLearned();
-      return;
-    }
-
-    // 🎉 Mini confetti khi học mới
-    if (isNew) {
-      unawaited(_saveProgress());
-      if (playReward) _miniConfettiController.play();
     }
   }
 
-  /// 🎉 Khi học xong tất cả: confetti + âm thanh + unlock
+  /// 🎉 Khi học xong tất cả
   Future<void> _onAllLearned() async {
     _confettiController.play();
     await Future.delayed(const Duration(milliseconds: 300));
     try {
       await _player.play(AssetSource("audio/victory.mp3"));
     } catch (e) {
-      debugPrint("⚠️ Lỗi khi phát nhạc victory: $e");
+      debugPrint("⚠️ Lỗi khi phát âm thanh victory: $e");
     }
 
     final levels = await ProgressService.loadLevels();
@@ -130,7 +121,6 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
     }
 
     await _setFinalRewardShown();
-    setState(() {});
     _showFinalPopup();
   }
 
@@ -157,9 +147,11 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
     while (newIndex == currentIndex && numbers.length > 1) {
       newIndex = random.nextInt(numbers.length);
     }
+
     try {
       await _player.play(AssetSource("audio/random.mp3"));
     } catch (_) {}
+
     setState(() => currentIndex = newIndex);
     _markLearned(currentIndex);
   }
@@ -191,7 +183,6 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
             filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
             child: Dialog(
               backgroundColor: Colors.white.withOpacity(0.05),
-              elevation: 0,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30)),
               insetPadding: const EdgeInsets.all(24),
@@ -240,7 +231,6 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
                     ),
                     const SizedBox(height: 20),
 
-                    // ✨ Tiêu đề gradient kiểu TPBank
                     ShaderMask(
                       shaderCallback: (r) => const LinearGradient(
                         colors: [Colors.white, Color(0xFFFFE082)],
@@ -268,7 +258,6 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
                     ),
                     const SizedBox(height: 24),
 
-                    // 🔮 Nút Gradient kiểu Fintech
                     GestureDetector(
                       onTap: () {
                         Navigator.pop(context);
