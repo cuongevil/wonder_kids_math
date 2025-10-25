@@ -1,7 +1,8 @@
+import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../models/level.dart';
 import '../services/progress_service.dart';
 
@@ -13,6 +14,7 @@ class AppScaffold extends StatefulWidget {
   final Widget? bottomNavigationBar;
   final List<Level>? levels;
   final Function(List<Level>)? onLevelsChanged;
+  final bool showBottomNav; // ✅ mới thêm
 
   const AppScaffold({
     super.key,
@@ -23,6 +25,7 @@ class AppScaffold extends StatefulWidget {
     this.bottomNavigationBar,
     this.levels,
     this.onLevelsChanged,
+    this.showBottomNav = true, // ✅ mặc định hiển thị
   });
 
   @override
@@ -40,7 +43,7 @@ class _AppScaffoldState extends State<AppScaffold> {
   }
 
   Future<void> _clearCache() async {
-    await ProgressService.resetAll(); // 🔹 xóa sao + learnedIndexes
+    await ProgressService.resetAll();
     final defaultLevels = _defaultLevels();
     widget.onLevelsChanged?.call(defaultLevels);
     _showSnack("Đã xóa cache toàn bộ");
@@ -57,8 +60,6 @@ class _AppScaffoldState extends State<AppScaffold> {
     _showSnack("Đã mở khóa tất cả level");
   }
 
-  /// 🐞 Debug popup
-  /// 🐞 Debug popup
   Future<void> _debugLevels() async {
     final totalStars = await ProgressService.getGrandTotal();
     if (!mounted) return;
@@ -69,7 +70,6 @@ class _AppScaffoldState extends State<AppScaffold> {
         title: const Text("🐞 Debug Levels"),
         content: Text("⭐ Tổng sao: $totalStars"),
         actions: [
-          // Reset toàn bộ progress (grand total + levels)
           TextButton(
             onPressed: () async {
               await ProgressService.resetAll();
@@ -78,7 +78,6 @@ class _AppScaffoldState extends State<AppScaffold> {
             },
             child: const Text("🔄 Reset"),
           ),
-          // Clear SharedPreferences
           TextButton(
             onPressed: () async {
               await ProgressService.clear();
@@ -87,7 +86,6 @@ class _AppScaffoldState extends State<AppScaffold> {
             },
             child: const Text("🗑️ Clear"),
           ),
-          // ✅ Chơi lại từ đầu toàn bộ levels
           TextButton(
             onPressed: () async {
               final defaultLevels = _defaultLevels();
@@ -97,10 +95,7 @@ class _AppScaffoldState extends State<AppScaffold> {
                 if (lv.levelKey != null && lv.levelKey!.isNotEmpty) {
                   await ProgressService.saveStars(lv.levelKey!, 0);
                   await ProgressService.saveLearnedIndexes(lv.levelKey!, {});
-                  await prefs.setBool(
-                    "isFinalRewardShown_${lv.levelKey}",
-                    false,
-                  );
+                  await prefs.setBool("isFinalRewardShown_${lv.levelKey}", false);
                 }
               }
 
@@ -114,7 +109,6 @@ class _AppScaffoldState extends State<AppScaffold> {
             },
             child: const Text("🔄 Chơi lại toàn bộ"),
           ),
-          // 🔓 Unlock All Levels
           TextButton(
             onPressed: () async {
               final updated = _defaultLevels();
@@ -156,145 +150,7 @@ class _AppScaffoldState extends State<AppScaffold> {
     }
   }
 
-  List<Level> _defaultLevels() {
-    return [
-      Level(
-        index: 0,
-        title: 'Bắt đầu',
-        type: LevelType.start,
-        state: LevelState.playable,
-        levelKey: "start",
-      ),
-      Level(
-        index: 1,
-        title: 'Số 0–10',
-        type: LevelType.topic,
-        state: LevelState.locked,
-        route: '/learn_numbers',
-        levelKey: "0_10",
-      ),
-      Level(
-        index: 2,
-        title: 'Số 0–20',
-        type: LevelType.topic,
-        state: LevelState.locked,
-        route: '/learn_numbers_20',
-        levelKey: "0_20",
-      ),
-      Level(
-        index: 3,
-        title: 'Số 0–50',
-        type: LevelType.topic,
-        state: LevelState.locked,
-        route: '/learn_numbers_50',
-        levelKey: "0_50",
-      ),
-      Level(
-        index: 4,
-        title: 'Số 0–100',
-        type: LevelType.topic,
-        state: LevelState.locked,
-        route: '/learn_numbers_100',
-        levelKey: "0_100",
-      ),
-      Level(
-        index: 5,
-        title: 'So Sánh',
-        type: LevelType.topic,
-        state: LevelState.locked,
-        route: '/game_compare',
-        levelKey: "compare",
-      ),
-      Level(
-        index: 6,
-        title: 'Cộng ≤10',
-        type: LevelType.topic,
-        state: LevelState.locked,
-        route: '/game_addition10',
-        levelKey: "addition10",
-      ),
-      Level(
-        index: 7,
-        title: 'Trừ ≤10',
-        type: LevelType.topic,
-        state: LevelState.locked,
-        route: '/game_subtraction10',
-        levelKey: "subtraction10",
-      ),
-      Level(
-        index: 8,
-        title: 'Cộng ≤20',
-        type: LevelType.topic,
-        state: LevelState.locked,
-        route: '/game_addition20',
-        levelKey: "addition20",
-      ),
-      Level(
-        index: 9,
-        title: 'Trừ ≤20',
-        type: LevelType.topic,
-        state: LevelState.locked,
-        route: '/game_subtraction20',
-        levelKey: "subtraction20",
-      ),
-      Level(
-        index: 10,
-        title: 'Cộng ≤50',
-        type: LevelType.topic,
-        state: LevelState.locked,
-        route: '/game_addition50',
-        levelKey: "addition50",
-      ),
-      Level(
-        index: 11,
-        title: 'Trừ ≤50',
-        type: LevelType.topic,
-        state: LevelState.locked,
-        route: '/game_subtraction50',
-        levelKey: "subtraction50",
-      ),
-      Level(
-        index: 12,
-        title: 'Cộng ≤100',
-        type: LevelType.topic,
-        state: LevelState.locked,
-        route: '/game_addition100',
-        levelKey: "addition100",
-      ),
-      Level(
-        index: 13,
-        title: 'Trừ ≤100',
-        type: LevelType.topic,
-        state: LevelState.locked,
-        route: '/game_subtraction100',
-        levelKey: "subtraction100",
-      ),
-      Level(
-        index: 14,
-        title: 'Hình Học',
-        type: LevelType.topic,
-        state: LevelState.locked,
-        route: '/game_shapes',
-        levelKey: "shapes",
-      ),
-      Level(
-        index: 15,
-        title: 'Đo Lường',
-        type: LevelType.topic,
-        state: LevelState.locked,
-        route: '/game_measure_time',
-        levelKey: "measure",
-      ),
-      Level(
-        index: 16,
-        title: 'Tổng hợp',
-        type: LevelType.boss,
-        state: LevelState.locked,
-        route: '/game_final_boss',
-        levelKey: "final_boss",
-      ),
-    ];
-  }
+  List<Level> _defaultLevels() => ProgressService.defaultLevels();
 
   @override
   Widget build(BuildContext context) {
@@ -306,80 +162,99 @@ class _AppScaffoldState extends State<AppScaffold> {
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         elevation: 0,
-        title: Text(
-          widget.title,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            shadows: [Shadow(color: Colors.black26, blurRadius: 4)],
+        backgroundColor: Colors.white.withOpacity(0.05),
+        flexibleSpace: ClipRRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            child: Container(color: Colors.white.withOpacity(0.05)),
           ),
         ),
-        actions: widget.actions,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: isNight
-                  ? [const Color(0xFF0D47A1), const Color(0xFF1A237E)]
-                  : [const Color(0xFF81D4FA), const Color(0xFFF48FB1)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        title: ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
+          ).createShader(bounds),
+          child: Text(
+            widget.title,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              shadows: [Shadow(color: Colors.black26, blurRadius: 4)],
             ),
           ),
         ),
+        actions: widget.actions ??
+            (kDebugMode
+                ? [
+              IconButton(
+                icon: const Icon(Icons.bug_report, color: Colors.white),
+                onPressed: _debugLevels,
+              )
+            ]
+                : null),
+        centerTitle: true,
       ),
       body: widget.body,
       floatingActionButton: widget.floatingActionButton,
-      bottomNavigationBar:
-          widget.bottomNavigationBar ??
-          BottomAppBar(
-            color: Colors.white,
-            elevation: 8,
-            child: SizedBox(
-              height: 72,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildKidIconButton(
-                    context: context,
-                    color: Colors.deepPurpleAccent,
-                    icon: Icons.home,
-                    tooltip: "Trang chủ",
-                    onTap: () => _goHome(context),
-                  ),
-                  _buildKidIconButton(
-                    context: context,
-                    color: Colors.pinkAccent,
-                    icon: Icons.person,
-                    tooltip: "Thành tích",
-                    onTap: () => Navigator.pushNamed(context, "/profile"),
-                  ),
-                  _buildKidIconButton(
-                    context: context,
-                    color: Colors.orangeAccent,
-                    icon: Icons.leaderboard,
-                    tooltip: "Bảng xếp hạng",
-                    onTap: () => Navigator.pushNamed(context, "/leaderboard"),
-                  ),
-                  _buildKidIconButton(
-                    context: context,
-                    color: Colors.lightBlueAccent,
-                    icon: Icons.collections,
-                    tooltip: "Bộ sưu tập huy hiệu",
-                    onTap: () => Navigator.pushNamed(context, "/badges"),
-                  ),
-                  // if (kDebugMode)
-                  //   _buildKidIconButton(
-                  //     context: context,
-                  //     color: Colors.orangeAccent,
-                  //     icon: Icons.bug_report,
-                  //     tooltip: "Debug Levels",
-                  //     onTap: _debugLevels,
-                  //   ),
-                ],
-              ),
-            ),
+      bottomNavigationBar: widget.showBottomNav
+          ? (widget.bottomNavigationBar ?? _buildDefaultBottomNav())
+          : null, // ✅ không hiển thị nếu showBottomNav = false
+    );
+  }
+
+  Widget _buildDefaultBottomNav() {
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      child: Container(
+        height: 72,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
+            begin: Alignment.bottomLeft,
+            end: Alignment.topRight,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 10,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildKidIconButton(
+              context: context,
+              color: Colors.deepPurpleAccent,
+              icon: Icons.home,
+              tooltip: "Trang chủ",
+              onTap: () => _goHome(context),
+            ),
+            _buildKidIconButton(
+              context: context,
+              color: Colors.pinkAccent,
+              icon: Icons.person,
+              tooltip: "Thành tích",
+              onTap: () => Navigator.pushNamed(context, "/profile"),
+            ),
+            _buildKidIconButton(
+              context: context,
+              color: Colors.orangeAccent,
+              icon: Icons.leaderboard,
+              tooltip: "Bảng xếp hạng",
+              onTap: () => Navigator.pushNamed(context, "/leaderboard"),
+            ),
+            _buildKidIconButton(
+              context: context,
+              color: Colors.lightBlueAccent,
+              icon: Icons.settings,
+              tooltip: "Cài đặt",
+              onTap: () => Navigator.pushNamed(context, "/settings"),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -7,15 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wonderkids.math/screens/badge_collection_screen.dart';
-import 'package:wonderkids.math/screens/leaderboard_screen.dart';
 import 'package:wonderkids.math/screens/level_detail.dart';
-import 'package:wonderkids.math/screens/map_screen.dart';
-import 'package:wonderkids.math/screens/profile_screen.dart';
-import 'package:wonderkids.math/screens/setting_screen.dart';
 import 'package:wonderkids.math/themes/app_theme.dart';
 import 'package:wonderkids.math/utils/custom_page_route.dart';
 import 'package:wonderkids.math/utils/route_observer.dart';
-import 'package:wonderkids.math/widgets/animated_bottom_nav_bar.dart';
+import 'package:wonderkids.math/widgets/app_shell.dart';
 
 import 'app_open_ad_manager.dart';
 import 'firebase_options.dart';
@@ -30,7 +24,6 @@ Future<void> main() async {
   runApp(const WonderKidsMathApp());
 }
 
-/// ✅ Khởi tạo Firebase
 Future<void> _initFirebase() async {
   try {
     await Firebase.initializeApp(
@@ -42,11 +35,9 @@ Future<void> _initFirebase() async {
   }
 }
 
-/// ✅ Khởi tạo Google Mobile Ads SDK
 Future<void> _initAdMob() async {
   try {
     final status = await MobileAds.instance.initialize();
-
     for (final entry in status.adapterStatuses.entries) {
       debugPrint(
         '📢 [AdMob] Adapter: ${entry.key}, '
@@ -55,7 +46,8 @@ Future<void> _initAdMob() async {
       );
     }
 
-    AppOpenAdManager.showAdIfAllowed(); // 🚀 Hiển thị quảng cáo AppOpen mỗi ngày 1 lần
+    // 🚀 Hiển thị quảng cáo AppOpen mỗi ngày 1 lần
+    AppOpenAdManager.showAdIfAllowed();
 
     debugPrint('✅ [AdMob] SDK initialized successfully');
   } catch (e, st) {
@@ -63,7 +55,6 @@ Future<void> _initAdMob() async {
   }
 }
 
-/// ✅ Bật Firebase App Check (Play Integrity trên release)
 Future<void> _initAppCheck() async {
   try {
     await FirebaseAppCheck.instance.activate(
@@ -88,15 +79,7 @@ class WonderKidsMathApp extends StatefulWidget {
 }
 
 class _WonderKidsMathAppState extends State<WonderKidsMathApp> {
-  int _currentIndex = 0;
   bool _firstLaunchChecked = false;
-
-  final List<Widget> _screens = const [
-    MapScreen(),
-    LeaderboardScreen(),
-    ProfileScreen(),
-    SettingScreen(), // ✅ Tab Setting
-  ];
 
   @override
   void initState() {
@@ -126,12 +109,13 @@ class _WonderKidsMathAppState extends State<WonderKidsMathApp> {
     }
 
     return MaterialApp(
-      title: 'Wonder Kids Vui Học Toán',
+      title: 'WonderKids Vui Học Toán',
       debugShowCheckedModeBanner: false,
       navigatorObservers: [appRouteObserver],
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.dark,
+      // 🌙 ép theme tối fintech
       onGenerateRoute: (settings) {
         final routes = {
           LevelDetail.routeName: (_) => const LevelDetail(),
@@ -141,36 +125,7 @@ class _WonderKidsMathAppState extends State<WonderKidsMathApp> {
         if (builder != null) return CustomPageRoute(child: builder(context));
         return null;
       },
-      home: Scaffold(
-        extendBody: true,
-        body: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 400),
-          child: _screens[_currentIndex],
-        ),
-        bottomNavigationBar: ClipRRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                border: Border(
-                  top: BorderSide(color: Colors.white.withOpacity(0.1)),
-                ),
-              ),
-              child: AnimatedBottomNavBar(
-                currentIndex: _currentIndex,
-                onTap: (i) => setState(() => _currentIndex = i),
-                icons: const [
-                  Icons.map_rounded,
-                  Icons.leaderboard_rounded,
-                  Icons.person_rounded,
-                  Icons.settings_rounded,
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      home: const AppShell(),
     );
   }
 }

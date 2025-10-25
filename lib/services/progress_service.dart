@@ -274,4 +274,26 @@ class ProgressService {
     }
     return total;
   }
+
+  static List<Level> defaultLevels() {
+    return [
+      Level(index: 0, title: 'Bắt đầu', type: LevelType.start, state: LevelState.playable, levelKey: "start"),
+      Level(index: 1, title: 'Số 0–10', type: LevelType.topic, state: LevelState.locked, route: '/learn_numbers', levelKey: "0_10"),
+      Level(index: 2, title: 'Số 0–20', type: LevelType.topic, state: LevelState.locked, route: '/learn_numbers_20', levelKey: "0_20"),
+      Level(index: 3, title: 'Số 0–50', type: LevelType.topic, state: LevelState.locked, route: '/learn_numbers_50', levelKey: "0_50"),
+      Level(index: 4, title: 'Số 0–100', type: LevelType.topic, state: LevelState.locked, route: '/learn_numbers_100', levelKey: "0_100"),
+      Level(index: 5, title: 'So Sánh', type: LevelType.topic, state: LevelState.locked, route: '/game_compare', levelKey: "compare"),
+      Level(index: 6, title: 'Cộng ≤10', type: LevelType.topic, state: LevelState.locked, route: '/game_addition10', levelKey: "addition10"),
+      Level(index: 7, title: 'Trừ ≤10', type: LevelType.topic, state: LevelState.locked, route: '/game_subtraction10', levelKey: "subtraction10"),
+      Level(index: 8, title: 'Cộng ≤20', type: LevelType.topic, state: LevelState.locked, route: '/game_addition20', levelKey: "addition20"),
+      Level(index: 9, title: 'Trừ ≤20', type: LevelType.topic, state: LevelState.locked, route: '/game_subtraction20', levelKey: "subtraction20"),
+      Level(index: 10, title: 'Cộng ≤50', type: LevelType.topic, state: LevelState.locked, route: '/game_addition50', levelKey: "addition50"),
+      Level(index: 11, title: 'Trừ ≤50', type: LevelType.topic, state: LevelState.locked, route: '/game_subtraction50', levelKey: "subtraction50"),
+      Level(index: 12, title: 'Cộng ≤100', type: LevelType.topic, state: LevelState.locked, route: '/game_addition100', levelKey: "addition100"),
+      Level(index: 13, title: 'Trừ ≤100', type: LevelType.topic, state: LevelState.locked, route: '/game_subtraction100', levelKey: "subtraction100"),
+      Level(index: 14, title: 'Hình Học', type: LevelType.topic, state: LevelState.locked, route: '/game_shapes', levelKey: "shapes"),
+      Level(index: 15, title: 'Đo Lường', type: LevelType.topic, state: LevelState.locked, route: '/game_measure_time', levelKey: "measure"),
+      Level(index: 16, title: 'Tổng hợp', type: LevelType.boss, state: LevelState.locked, route: '/game_final_boss', levelKey: "final_boss"),
+    ];
+  }
 }
