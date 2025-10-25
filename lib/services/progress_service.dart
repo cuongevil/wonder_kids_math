@@ -333,7 +333,6 @@ class ProgressService {
       Level(index: 13, title: 'Trừ ≤100', type: LevelType.topic, state: LevelState.locked, route: '/game_subtraction100', levelKey: "subtraction100"),
       Level(index: 14, title: 'Hình học', type: LevelType.topic, state: LevelState.locked, route: '/game_shapes', levelKey: "shapes"),
       Level(index: 15, title: 'Đo lường', type: LevelType.topic, state: LevelState.locked, route: '/game_measure_time', levelKey: "measure"),
-      Level(index: 16, title: 'Tổng hợp', type: LevelType.boss, state: LevelState.locked, route: '/game_final_boss', levelKey: "final_boss"),
     ];
   }
 }

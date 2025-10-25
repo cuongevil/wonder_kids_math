@@ -140,7 +140,6 @@ class _MapScreenState extends State<MapScreen>
       "subtraction100": 10,
       "shapes": 12,
       "measure": 10,
-      "final_boss": 20,
     };
     return totals[key] ?? 0;
   }

@@ -1,14 +1,14 @@
 import 'dart:math';
-
+import 'dart:ui';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../services/progress_service.dart';
 import '../widgets/wow_mascot.dart';
 import 'base_screen.dart';
 
+/// ➖ GameSubtraction50Screen v6.0 — Fintech Glow + 3-Tier Confetti + Gradient Popup
 class GameSubtraction50Screen extends StatefulWidget {
   const GameSubtraction50Screen({super.key});
 
@@ -38,6 +38,7 @@ class _GameSubtraction50ScreenState extends State<GameSubtraction50Screen>
   bool isLoading = true;
 
   late ConfettiController _confettiController;
+  late ConfettiController _miniConfettiController;
   late AnimationController _popupController;
 
   final List<String> praiseVoices = ["correct1", "correct2", "correct3"];
@@ -52,9 +53,8 @@ class _GameSubtraction50ScreenState extends State<GameSubtraction50Screen>
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(
-      duration: const Duration(seconds: 1),
-    );
+    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+    _miniConfettiController = ConfettiController(duration: const Duration(seconds: 1));
     _popupController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -68,8 +68,7 @@ class _GameSubtraction50ScreenState extends State<GameSubtraction50Screen>
     _prefs = await SharedPreferences.getInstance();
     correctCount = _prefs.getInt(progressKey) ?? 0;
     isCompleted = _prefs.getBool(completedKey) ?? false;
-
-    if (isCompleted) isReviewMode = true;
+    isReviewMode = isCompleted;
     _newQuestion();
     setState(() => isLoading = false);
   }
@@ -77,23 +76,26 @@ class _GameSubtraction50ScreenState extends State<GameSubtraction50Screen>
   @override
   void dispose() {
     _confettiController.dispose();
+    _miniConfettiController.dispose();
     _popupController.dispose();
     _player.dispose();
     super.dispose();
   }
 
   Future<void> _play(String name) async {
-    await _player.play(AssetSource('audios/$name.mp3'));
+    try {
+      await _player.play(AssetSource('audios/$name.mp3'));
+    } catch (_) {}
   }
 
   void _newQuestion() {
-    a = _rand.nextInt(51); // 5–50
-    b = _rand.nextInt(a + 1); // đảm bảo b ≤ a
+    a = _rand.nextInt(51);
+    b = _rand.nextInt(a + 1);
     answer = a - b;
 
     options = [answer];
     while (options.length < 3) {
-      int fake = _rand.nextInt(51); // 0–50
+      int fake = _rand.nextInt(51);
       if (!options.contains(fake)) options.add(fake);
     }
     options.shuffle();
@@ -105,7 +107,7 @@ class _GameSubtraction50ScreenState extends State<GameSubtraction50Screen>
 
     if (correct) {
       isMascotHappy = true;
-      _confettiController.play();
+      _miniConfettiController.play();
       await _play(praiseVoices[_rand.nextInt(praiseVoices.length)]);
 
       if (!isReviewMode) {
@@ -115,8 +117,8 @@ class _GameSubtraction50ScreenState extends State<GameSubtraction50Screen>
         if (correctCount >= 10 && !isCompleted) {
           isCompleted = true;
           await _prefs.setBool(completedKey, true);
-          await Future.delayed(const Duration(milliseconds: 600));
-          _showRewardDialog();
+          await Future.delayed(const Duration(milliseconds: 500));
+          await _showRewardPopup();
           return;
         }
       }
@@ -146,20 +148,13 @@ class _GameSubtraction50ScreenState extends State<GameSubtraction50Screen>
     showDialog(
       context: context,
       builder: (_) => ScaleTransition(
-        scale: CurvedAnimation(
-          parent: _popupController,
-          curve: Curves.elasticOut,
-        ),
+        scale: CurvedAnimation(parent: _popupController, curve: Curves.elasticOut),
         child: AlertDialog(
           backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
           content: Text(content, textAlign: TextAlign.center),
           actionsAlignment: MainAxisAlignment.center,
           actions: [
@@ -170,9 +165,7 @@ class _GameSubtraction50ScreenState extends State<GameSubtraction50Screen>
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.deepOrangeAccent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
               child: const Text("Tiếp tục ➡️"),
             ),
@@ -182,75 +175,137 @@ class _GameSubtraction50ScreenState extends State<GameSubtraction50Screen>
     );
   }
 
-  void _showRewardDialog() async {
+  /// 🎊 Popup hoàn thành Fintech glow gradient
+  Future<void> _showRewardPopup() async {
     await _play("victory");
     _confettiController.play();
-
     await ProgressService.markLevelCompleted("subtraction50");
 
-    showDialog(
+    final size = MediaQuery.of(context).size;
+    showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => ScaleTransition(
-        scale: CurvedAnimation(
-          parent: _popupController,
-          curve: Curves.easeOutBack,
-        ),
-        child: AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            "🏆 Giỏi quá!",
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-          ),
-          content: const Text(
-            "Bé đã hoàn thành 10 phép trừ ≤50! 🌟",
-            textAlign: TextAlign.center,
-          ),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context, true);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+      barrierLabel: '',
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (_, __, ___) => Container(),
+      transitionBuilder: (_, anim, __, ___) {
+        final scale = Tween<double>(begin: 0.8, end: 1.0)
+            .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack));
+
+        return Transform.scale(
+          scale: scale.value,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            child: Dialog(
+              backgroundColor: Colors.white.withOpacity(0.05),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              insetPadding: const EdgeInsets.all(24),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.25),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedScale(
+                      duration: const Duration(milliseconds: 600),
+                      curve: Curves.easeOutBack,
+                      scale: scale.value,
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.white.withOpacity(0.6),
+                              blurRadius: 25,
+                              spreadRadius: 10,
+                            ),
+                          ],
+                        ),
+                        child: Image.asset(
+                          "assets/images/mascot/mascot_10.png",
+                          width: size.width * 0.4,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    ShaderMask(
+                      shaderCallback: (r) => const LinearGradient(
+                        colors: [Colors.white, Color(0xFFFFE082)],
+                      ).createShader(r),
+                      child: const Text(
+                        "Bé đã hoàn thành 10 phép trừ ≤50! 🌟",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pop(context, true);
+                      },
+                      child: Container(
+                        padding:
+                        const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(25),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0xFF5E2CED).withOpacity(0.4),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: const Text(
+                          "Quay lại bản đồ",
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: const Text("Hoàn thành 🌟"),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
-  }
-
-  Future<void> _resetProgress() async {
-    await _prefs.remove(progressKey);
-    await _prefs.remove(completedKey);
-    setState(() {
-      correctCount = 0;
-      isCompleted = false;
-      isReviewMode = false;
-    });
-    Navigator.pop(context);
-    _newQuestion();
   }
 
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(color: Colors.deepOrangeAccent),
-        ),
-      );
+          body: Center(
+              child: CircularProgressIndicator(color: Colors.deepOrangeAccent)));
     }
 
     final width = MediaQuery.of(context).size.width;
@@ -263,31 +318,46 @@ class _GameSubtraction50ScreenState extends State<GameSubtraction50Screen>
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xffffe5d0), Color(0xffd0e5ff)],
+                colors: [Color(0xFFFFE5D0), Color(0xFFD0E5FF)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
             ),
           ),
+
+          // 🎊 Confetti 3 tầng Fintech
           Align(
-            alignment: Alignment.topCenter,
+            alignment: Alignment.center,
             child: ConfettiWidget(
               confettiController: _confettiController,
               blastDirectionality: BlastDirectionality.explosive,
-              numberOfParticles: 30,
+              emissionFrequency: 0.05,
+              numberOfParticles: 25,
+              gravity: 0.3,
               colors: const [
-                Colors.orange,
-                Colors.yellow,
-                Colors.pink,
-                Colors.blueAccent,
+                Color(0xFF5E2CED),
+                Color(0xFFFF8B00),
+                Color(0xFFA58CFF),
               ],
             ),
           ),
-          Positioned(
-            bottom: 100,
-            right: 24,
-            child: WowMascot.only(isHappy: isMascotHappy, scale: 0.8)
+          Align(
+            alignment: Alignment.center,
+            child: ConfettiWidget(
+              confettiController: _miniConfettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              numberOfParticles: 10,
+              gravity: 0.4,
+              colors: const [
+                Color(0xFFFFC300),
+                Color(0xFF7E57C2),
+                Color(0xFFFF80AB),
+              ],
+            ),
           ),
+
+          Positioned(bottom: 100, right: 24, child: WowMascot.only(isHappy: isMascotHappy, scale: 0.8)),
+
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -307,60 +377,60 @@ class _GameSubtraction50ScreenState extends State<GameSubtraction50Screen>
                 children: options
                     .map(
                       (opt) => ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepOrangeAccent,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 32,
-                            vertical: 18,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          elevation: 8,
-                        ),
-                        onPressed: () => _check(opt),
-                        child: Text(
-                          "$opt",
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 40),
-              if (!isReviewMode) ...[
-                Container(
-                  width: width * 0.6,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.4),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: AnimatedFractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    duration: const Duration(milliseconds: 400),
-                    widthFactor: correctCount / 10,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.amber,
-                        borderRadius: BorderRadius.circular(10),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepOrangeAccent,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 32, vertical: 18),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24)),
+                      elevation: 8,
+                    ),
+                    onPressed: () => _check(opt),
+                    child: Text(
+                      "$opt",
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Tiến độ: $correctCount / 10",
-                  style: const TextStyle(
-                    color: Colors.deepPurple,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ] else
+                )
+                    .toList(),
+              ),
+              const SizedBox(height: 40),
+              if (!isReviewMode)
+                Column(
+                  children: [
+                    Container(
+                      width: width * 0.6,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: AnimatedFractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        duration: const Duration(milliseconds: 400),
+                        widthFactor: correctCount / 10,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.amber,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Tiến độ: $correctCount / 10",
+                      style: const TextStyle(
+                          color: Colors.deepPurple,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                )
+              else
                 const Text(
                   "Chế độ ôn luyện 🌈",
                   style: TextStyle(

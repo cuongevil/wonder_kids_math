@@ -162,7 +162,6 @@ class _WonderKidsMathAppState extends State<WonderKidsMathApp> {
           '/game_subtraction100': (_) => const GameSubtraction100Screen(),
           '/game_shapes': (_) => const GameShapesScreen(),
           '/game_measure_time': (_) => const GameMeasureTimeScreen(),
-          '/game_final_boss': (_) => const GameFinalBossScreen(),
         };
 
         final builder = routes[settings.name];
