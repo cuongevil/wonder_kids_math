@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'dart:ui';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:confetti/confetti.dart';
@@ -12,6 +14,7 @@ import '../services/progress_service.dart';
 import '../widgets/wow_card.dart';
 import 'base_screen.dart';
 
+/// 🌟 LearnNumbersScreen v6.0 — Fintech Confetti + Gradient Popup + Victory Audio
 class LearnNumbersScreen extends StatefulWidget {
   const LearnNumbersScreen({super.key});
 
@@ -21,23 +24,16 @@ class LearnNumbersScreen extends StatefulWidget {
 
 class _LearnNumbersScreenState extends State<LearnNumbersScreen>
     with TickerProviderStateMixin {
-  final String levelKey = "0_10"; // 🔹 định danh level này
+  final String levelKey = "0_10";
   List<dynamic> numbers = [];
   int currentIndex = 0;
   int totalStars = 0;
-  Map<String, bool> learnedIndexes = {}; // ✅ đổi từ Set<int> sang Map<String, bool>
+  Map<String, bool> learnedIndexes = {};
   bool isFinalRewardShown = false;
 
   final AudioPlayer _player = AudioPlayer();
   late ConfettiController _confettiController;
   late ConfettiController _miniConfettiController;
-
-  final List<IconData> rewardIcons = [
-    Icons.star,
-    Icons.emoji_events,
-    Icons.card_giftcard,
-    Icons.favorite,
-  ];
 
   @override
   void initState() {
@@ -50,19 +46,16 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
   Future<void> _initData() async {
     await _loadNumbers();
     await _loadProgress();
-
-    // ✅ Nếu chưa học số nào, tự động cộng sao đầu tiên
     if (numbers.isNotEmpty && learnedIndexes.isEmpty) {
-      _markLearned(0);
+      _markLearned(0, playReward: false);
     }
   }
 
   Future<void> _loadNumbers() async {
     final response = await rootBundle.loadString('assets/configs/numbers.json');
     final data = json.decode(response);
-    setState(() {
-      numbers = data["numbers"];
-    });
+    numbers = data["numbers"];
+    setState(() {});
   }
 
   Future<void> _loadProgress() async {
@@ -84,195 +77,241 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
     setState(() => isFinalRewardShown = true);
   }
 
-  void _markLearned(int index) async {
+  /// ✅ Đánh dấu 1 số đã học
+  Future<void> _markLearned(int index, {bool playReward = true}) async {
     final key = index.toString();
+
+    bool isNew = false;
     if (!learnedIndexes.containsKey(key)) {
-      setState(() {
-        learnedIndexes[key] = true;
-        totalStars += 1;
-      });
-      await _saveProgress();
-
-      _miniConfettiController.play();
-
-      // 🎯 Khi học xong tất cả
-      if (totalStars == numbers.length && !isFinalRewardShown) {
-        _confettiController.play();
-
-        final levels = await ProgressService.loadLevels();
-        final currentIdx = levels.indexWhere(
-              (lv) => lv.levelKey == levelKey || lv.route == "/learn_numbers",
-        );
-
-        if (currentIdx != -1) {
-          levels[currentIdx].state = LevelState.completed;
-          if (currentIdx + 1 < levels.length &&
-              levels[currentIdx + 1].state == LevelState.locked) {
-            levels[currentIdx + 1].state = LevelState.playable;
-          }
-          await ProgressService.saveLevels(levels);
-        }
-
-        await _setFinalRewardShown();
-        _showRewardPopup(isFinal: true);
-      }
+      learnedIndexes[key] = true;
+      totalStars = learnedIndexes.length;
+      isNew = true;
+      setState(() {});
     }
+
+    final totalLearned = learnedIndexes.length;
+    final totalRequired = numbers.length;
+    debugPrint("📘 Đã học $totalLearned / $totalRequired ($levelKey)");
+
+    // 🎯 Khi học đủ toàn bộ → gọi ngay (chỉ 1 lần duy nhất)
+    if (totalLearned >= totalRequired && !isFinalRewardShown) {
+      await _onAllLearned();
+      return;
+    }
+
+    // 🎉 Mini confetti khi học mới
+    if (isNew) {
+      unawaited(_saveProgress());
+      if (playReward) _miniConfettiController.play();
+    }
+  }
+
+  /// 🎉 Khi học xong tất cả: confetti + âm thanh + unlock
+  Future<void> _onAllLearned() async {
+    _confettiController.play();
+    await Future.delayed(const Duration(milliseconds: 300));
+    try {
+      await _player.play(AssetSource("audio/victory.mp3"));
+    } catch (e) {
+      debugPrint("⚠️ Lỗi khi phát nhạc victory: $e");
+    }
+
+    final levels = await ProgressService.loadLevels();
+    final currentIdx = levels.indexWhere((lv) => lv.levelKey == levelKey);
+
+    if (currentIdx != -1) {
+      levels[currentIdx].state = LevelState.completed;
+      if (currentIdx + 1 < levels.length &&
+          levels[currentIdx + 1].state == LevelState.locked) {
+        levels[currentIdx + 1].state = LevelState.playable;
+      }
+      await ProgressService.saveLevels(levels);
+      await ProgressService.markLevelCompleted(levelKey);
+    }
+
+    await _setFinalRewardShown();
+    setState(() {});
+    _showFinalPopup();
   }
 
   void _next() {
     if (currentIndex < numbers.length - 1) {
       setState(() => currentIndex++);
       _markLearned(currentIndex);
-      WidgetsBinding.instance.addPostFrameCallback(
-            (_) => WowCard.triggerAnimation(context),
-      );
+    } else {
+      _markLearned(currentIndex);
     }
   }
 
   void _prev() {
     if (currentIndex > 0) {
       setState(() => currentIndex--);
-      _markLearned(currentIndex);
-      WidgetsBinding.instance.addPostFrameCallback(
-            (_) => WowCard.triggerAnimation(context),
-      );
+      _markLearned(currentIndex, playReward: false);
     }
   }
 
-  // 🎲 Học ngẫu nhiên
   void _random() async {
     if (numbers.isEmpty) return;
-
     final random = Random();
     int newIndex = currentIndex;
-
     while (newIndex == currentIndex && numbers.length > 1) {
       newIndex = random.nextInt(numbers.length);
     }
-
     try {
       await _player.play(AssetSource("audio/random.mp3"));
     } catch (_) {}
-
     setState(() => currentIndex = newIndex);
     _markLearned(currentIndex);
-
-    WidgetsBinding.instance.addPostFrameCallback(
-          (_) => WowCard.triggerAnimation(context),
-    );
   }
 
   Future<void> _playAudio(String path) async {
     await _player.stop();
-    await _player.play(AssetSource(path.replaceFirst('assets/', '')));
+    try {
+      await _player.play(AssetSource(path.replaceFirst('assets/', '')));
+    } catch (_) {}
   }
 
-  Future<void> _showRewardPopup({bool isFinal = false}) async {
-    final random = Random();
-    final icon = rewardIcons[random.nextInt(rewardIcons.length)];
+  /// 🎊 Popup hoàn thành gradient + blur + scale animation
+  void _showFinalPopup() {
     final size = MediaQuery.of(context).size;
 
-    if (isFinal) {
-      try {
-        await _player.play(AssetSource("audio/victory.mp3"));
-      } catch (_) {}
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: '',
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (_, __, ___) => Container(),
+      transitionBuilder: (_, anim, __, ___) {
+        final scale = Tween<double>(begin: 0.8, end: 1.0)
+            .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack));
 
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.all(30),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset(
-                "assets/images/mascot/mascot_10.png",
-                width: size.width * 0.5,
-                height: size.width * 0.5,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: 16),
-              ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [Colors.orange, Colors.pink, Colors.purple],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ).createShader(bounds),
-                child: Text(
-                  "🎉 Chúc mừng bé đã học xong!\n⭐ $totalStars / ${numbers.length} ⭐",
-                  style: TextStyle(
-                    fontSize: size.width * 0.08,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+        return Transform.scale(
+          scale: scale.value,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            child: Dialog(
+              backgroundColor: Colors.white.withOpacity(0.05),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30)),
+              insetPadding: const EdgeInsets.all(24),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                "Bé thật tuyệt vời! Hãy khoe ngay với bố mẹ nhé 👏👏",
-                style: TextStyle(
-                  fontSize: size.width * 0.05,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(
-                      blurRadius: 8,
-                      color: Colors.black45,
-                      offset: Offset(2, 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.25),
+                      blurRadius: 20,
+                      spreadRadius: 5,
                     ),
                   ],
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 🐱 Mascot Glow Pulse
+                    AnimatedScale(
+                      duration: const Duration(milliseconds: 600),
+                      curve: Curves.easeOutBack,
+                      scale: scale.value,
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.white.withOpacity(0.5),
+                              blurRadius: 25,
+                              spreadRadius: 10,
+                            ),
+                          ],
+                        ),
+                        child: Image.asset(
+                          "assets/images/mascot/mascot_10.png",
+                          width: size.width * 0.4,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
 
-      Future.delayed(const Duration(seconds: 4), () {
-        if (mounted && Navigator.canPop(context)) Navigator.pop(context);
-      });
-      return;
-    }
+                    // ✨ Tiêu đề gradient kiểu TPBank
+                    ShaderMask(
+                      shaderCallback: (r) => const LinearGradient(
+                        colors: [Colors.white, Color(0xFFFFE082)],
+                      ).createShader(r),
+                      child: Text(
+                        "Hoàn thành xuất sắc!",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: size.width * 0.08,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
 
-    // 🎁 Popup thường
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 100, color: Colors.yellow),
-            const SizedBox(height: 16),
-            Text(
-              "Tuyệt vời! Bạn đã học ⭐ $totalStars / ${numbers.length}",
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                shadows: [
-                  Shadow(
-                    blurRadius: 10,
-                    color: Colors.black45,
-                    offset: Offset(2, 2),
-                  ),
-                ],
+                    Text(
+                      "⭐ $totalStars / ${numbers.length} ⭐",
+                      style: TextStyle(
+                        fontSize: size.width * 0.06,
+                        color: Colors.white.withOpacity(0.9),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // 🔮 Nút Gradient kiểu Fintech
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pop(context, true);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(25),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0xFF5E2CED).withOpacity(0.4),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: const Text(
+                          "Quay lại bản đồ",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              textAlign: TextAlign.center,
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
-
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted && Navigator.canPop(context)) Navigator.pop(context);
-    });
   }
 
   @override
@@ -285,105 +324,91 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
     final size = MediaQuery.of(context).size;
 
     return BaseScreen(
-      title: "🌟 Số 0–10 🌟",
+      title: "🌟 Học số 0–10 🌟",
       child: Stack(
         children: [
           SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: EdgeInsets.only(bottom: size.height * 0.25),
+            padding: EdgeInsets.only(bottom: size.height * 0.2),
             child: Column(
               children: [
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: size.height * 0.015),
-                  child: SizedBox(
-                    width: size.width * 0.7,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: LinearProgressIndicator(
-                            value: (totalStars / numbers.length).clamp(0, 1),
-                            minHeight: size.height * 0.04,
-                            backgroundColor: Colors.grey[300],
-                            valueColor: const AlwaysStoppedAnimation(Colors.amber),
-                          ),
-                        ),
-                        Text(
-                          "⭐ $totalStars / ${numbers.length}",
-                          style: TextStyle(
-                            fontSize: size.width * 0.05,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                const SizedBox(height: 10),
+                _progressBar(size),
                 WowCard(imagePath: item["image"], text: item["text"]),
-                SizedBox(height: size.height * 0.04),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orangeAccent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: size.width * 0.08,
-                      vertical: size.height * 0.018,
-                    ),
-                  ),
-                  icon: Icon(Icons.volume_up, size: size.width * 0.07),
-                  label: Text(
-                    "Nghe",
-                    style: TextStyle(fontSize: size.width * 0.055),
-                  ),
+                const SizedBox(height: 20),
+                _mainButton(
+                  icon: Icons.volume_up,
+                  label: "Nghe số này",
+                  color: Colors.orangeAccent,
                   onPressed: () => _playAudio(item["audio"]),
                 ),
-                SizedBox(height: size.height * 0.04),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    if (currentIndex > 0)
-                      _circleButton(Icons.arrow_back, _prev, Colors.pinkAccent, size),
-                    _circleButton(Icons.shuffle, _random, Colors.amber, size),
-                    if (currentIndex < numbers.length - 1)
-                      _circleButton(Icons.arrow_forward, _next, Colors.lightBlue, size),
-                  ],
-                ),
+                const SizedBox(height: 25),
+                _navigationButtons(size),
               ],
             ),
           ),
-          ConfettiWidget(
-            confettiController: _confettiController,
-            blastDirectionality: BlastDirectionality.explosive,
-            colors: const [
-              Colors.red,
-              Colors.blue,
-              Colors.green,
-              Colors.orange,
-              Colors.purple,
-            ],
-            gravity: 0.3,
-          ),
-          Align(
-            alignment: Alignment.center,
-            child: ConfettiWidget(
-              confettiController: _miniConfettiController,
-              blastDirectionality: BlastDirectionality.explosive,
-              numberOfParticles: 10,
-              emissionFrequency: 0.5,
-              maxBlastForce: 10,
-              minBlastForce: 2,
-              colors: const [Colors.yellow, Colors.lightBlue, Colors.pink],
-              gravity: 0.5,
-            ),
-          ),
+          _buildConfetti(),
         ],
       ),
     );
   }
+
+  Widget _progressBar(Size size) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 10),
+    child: SizedBox(
+      width: size.width * 0.7,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: LinearProgressIndicator(
+              value: (totalStars / numbers.length).clamp(0, 1),
+              minHeight: size.height * 0.04,
+              backgroundColor: Colors.grey[300],
+              valueColor: const AlwaysStoppedAnimation(Color(0xFFFFC300)),
+            ),
+          ),
+          Text(
+            "⭐ $totalStars / ${numbers.length}",
+            style: TextStyle(
+              fontSize: size.width * 0.05,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _mainButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) =>
+      ElevatedButton.icon(
+        icon: Icon(icon, size: 30),
+        label: Text(label, style: const TextStyle(fontSize: 20)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+        ),
+        onPressed: onPressed,
+      );
+
+  Widget _navigationButtons(Size size) => Row(
+    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    children: [
+      if (currentIndex > 0)
+        _circleButton(Icons.arrow_back, _prev, Colors.pinkAccent, size),
+      _circleButton(Icons.shuffle, _random, Colors.amber, size),
+      if (currentIndex < numbers.length - 1)
+        _circleButton(Icons.arrow_forward, _next, Colors.lightBlue, size),
+    ],
+  );
 
   Widget _circleButton(
       IconData icon,
@@ -398,6 +423,90 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
         onPressed: onTap,
       ),
     );
+  }
+
+  // 🌈 Confetti Fintech 3 tầng
+  Widget _buildConfetti() {
+    return Stack(
+      children: [
+        Align(
+          alignment: Alignment.center,
+          child: ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirectionality: BlastDirectionality.explosive,
+            emissionFrequency: 0.05,
+            numberOfParticles: 20,
+            maxBlastForce: 10,
+            minBlastForce: 2,
+            gravity: 0.2,
+            colors: const [
+              Color(0xFF5E2CED),
+              Color(0xFFFF8B00),
+              Color(0xFFA58CFF),
+            ],
+            particleDrag: 0.05,
+            shouldLoop: false,
+            createParticlePath: _drawStar,
+          ),
+        ),
+        Align(
+          alignment: Alignment.center,
+          child: ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirectionality: BlastDirectionality.explosive,
+            emissionFrequency: 0.08,
+            numberOfParticles: 40,
+            maxBlastForce: 15,
+            minBlastForce: 5,
+            gravity: 0.3,
+            colors: const [
+              Color(0xFFE4B5FF),
+              Color(0xFFFFD180),
+              Color(0xFFB388FF),
+            ],
+          ),
+        ),
+        Align(
+          alignment: Alignment.center,
+          child: ConfettiWidget(
+            confettiController: _miniConfettiController,
+            blastDirectionality: BlastDirectionality.explosive,
+            numberOfParticles: 10,
+            maxBlastForce: 10,
+            minBlastForce: 2,
+            gravity: 0.4,
+            colors: const [
+              Color(0xFFFFC300),
+              Color(0xFF7E57C2),
+              Color(0xFFFF80AB),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Path _drawStar(Size size) {
+    double degToRad(double deg) => deg * (pi / 180.0);
+    const numberOfPoints = 5;
+    final halfWidth = size.width / 2;
+    final externalRadius = halfWidth;
+    final internalRadius = halfWidth / 2.5;
+    final degreesPerStep = degToRad(360 / numberOfPoints);
+    final halfDegreesPerStep = degreesPerStep / 2;
+    final path = Path();
+    final fullAngle = degToRad(360);
+    path.moveTo(size.width, halfWidth);
+
+    for (double step = 0; step < fullAngle; step += degreesPerStep) {
+      path.lineTo(halfWidth + externalRadius * cos(step),
+          halfWidth + externalRadius * sin(step));
+      path.lineTo(halfWidth + internalRadius * cos(step + halfDegreesPerStep),
+          halfWidth + internalRadius * sin(step + halfDegreesPerStep));
+    }
+
+    path.close();
+    return path;
   }
 
   @override

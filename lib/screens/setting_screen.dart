@@ -1,9 +1,11 @@
 import 'dart:ui';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../services/progress_service.dart';
 
 /// ⚙️ Wonder Kids Math — Firebase Login + Cloud Sync (fix for google_sign_in 7.2.0)
@@ -55,8 +57,9 @@ class _SettingScreenState extends State<SettingScreen> {
         accessToken: googleAuth.accessToken,
       );
 
-      final userCredential =
-      await FirebaseAuth.instance.signInWithCredential(credential);
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+        credential,
+      );
       setState(() => _user = userCredential.user);
 
       _showSnack('✅ Đăng nhập thành công với Google!');
@@ -177,11 +180,11 @@ class _SettingScreenState extends State<SettingScreen> {
     _showSnack('🎈 Đã đặt lại màn chào mừng. Lần sau sẽ hiển thị lại!');
   }
 
-  /// 🔄 Xoá toàn bộ tiến độ local
+  /// 🔄 Xoá toàn bộ tiến độ local + reset flag hoàn thành
   Future<void> _resetProgress() async {
     final confirm = await _showConfirmDialog(
       "Đặt lại toàn bộ tiến độ học?",
-      "Tất cả cấp độ và sao sẽ bị xoá, bé sẽ bắt đầu lại từ đầu.",
+      "Tất cả cấp độ, sao và trạng thái hoàn thành sẽ bị xoá. Bé sẽ bắt đầu lại từ đầu.",
       confirmText: "Đặt lại",
       confirmColor: Colors.orangeAccent,
     );
@@ -189,9 +192,21 @@ class _SettingScreenState extends State<SettingScreen> {
     if (!confirm) return;
 
     setState(() => _loading = true);
+
+    // 🧹 Gọi service xoá toàn bộ tiến độ
     await ProgressService.resetAll();
+
+    // 🔹 Xoá các flag hoàn thành level (isFinalRewardShown_xxx)
+    final prefs = await SharedPreferences.getInstance();
+    for (var key in prefs.getKeys()) {
+      if (key.startsWith('isFinalRewardShown_')) {
+        await prefs.remove(key);
+        debugPrint("🧹 Reset flag hoàn thành: $key");
+      }
+    }
+
     setState(() => _loading = false);
-    _showSnack('🧹 Đã xoá tiến độ học local!');
+    _showSnack('🧹 Đã xoá tiến độ học local và reset trạng thái hoàn thành!');
   }
 
   /// 🪄 SnackBar
@@ -207,11 +222,11 @@ class _SettingScreenState extends State<SettingScreen> {
 
   /// 💬 Dialog xác nhận
   Future<bool> _showConfirmDialog(
-      String title,
-      String message, {
-        required String confirmText,
-        required Color confirmColor,
-      }) async {
+    String title,
+    String message, {
+    required String confirmText,
+    required Color confirmColor,
+  }) async {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -271,10 +286,10 @@ class _SettingScreenState extends State<SettingScreen> {
             colors: isDark
                 ? [const Color(0xFF1E1E2E), const Color(0xFF5E2CED)]
                 : [
-              const Color(0xFF5E2CED),
-              const Color(0xFFA58CFF),
-              const Color(0xFFFF8B00),
-            ],
+                    const Color(0xFF5E2CED),
+                    const Color(0xFFA58CFF),
+                    const Color(0xFFFF8B00),
+                  ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -315,7 +330,7 @@ class _SettingScreenState extends State<SettingScreen> {
               icon: Icons.refresh_rounded,
               title: "Phát lại màn chào mừng",
               subtitle:
-              "Lần mở app kế tiếp sẽ hiển thị lại màn 'Bắt đầu thôi!' 🎉",
+                  "Lần mở app kế tiếp sẽ hiển thị lại màn 'Bắt đầu thôi!' 🎉",
               onTap: _resetWelcome,
             ),
             const SizedBox(height: 16),
@@ -341,7 +356,8 @@ class _SettingScreenState extends State<SettingScreen> {
               const Padding(
                 padding: EdgeInsets.all(32),
                 child: Center(
-                    child: CircularProgressIndicator(color: Colors.white)),
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
               ),
 
             const SizedBox(height: 40),
@@ -373,7 +389,7 @@ class _SettingScreenState extends State<SettingScreen> {
                 backgroundImage: _user?.photoURL != null
                     ? NetworkImage(_user!.photoURL!)
                     : const AssetImage('assets/images/mascot/mascot_10.png')
-                as ImageProvider,
+                          as ImageProvider,
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -435,15 +451,22 @@ class _SettingScreenState extends State<SettingScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              fontSize: 16)),
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text(subtitle,
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 13)),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                        ),
+                      ),
                     ],
                   ),
                 ),
