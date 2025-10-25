@@ -1,16 +1,16 @@
 import 'dart:math';
-
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import '../models/level.dart';
 import '../services/progress_service.dart';
 import '../utils/route_observer.dart';
-import '../widgets/app_scaffold.dart';
+import '../widgets/app_shell.dart';
 import '../widgets/level_node.dart';
+import '../themes/app_theme.dart';
 import 'level_detail.dart';
 
+/// 🗺️ MapScreen 2025 v2 — Hiệu ứng Fintech + Mở route học thật
 class MapScreen extends StatefulWidget {
   final ValueChanged<bool>? onScrollDirectionChanged;
 
@@ -34,9 +34,7 @@ class _MapScreenState extends State<MapScreen>
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    _confettiController = ConfettiController(
-      duration: const Duration(seconds: 2),
-    );
+    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
     _bounceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -46,7 +44,7 @@ class _MapScreenState extends State<MapScreen>
 
     _init();
 
-    // 👇 Lắng nghe cuộn để xác định hướng (ẩn / hiện BottomNav)
+    // 👇 Lắng nghe cuộn để ẩn / hiện BottomNavBar mượt
     _scrollController.addListener(() {
       final offset = _scrollController.offset;
       final diff = offset - _lastOffset;
@@ -92,9 +90,8 @@ class _MapScreenState extends State<MapScreen>
       }
     }
 
-    final firstPlayableIndex = levels.indexWhere(
-      (e) => e.state == LevelState.playable,
-    );
+    final firstPlayableIndex =
+    levels.indexWhere((e) => e.state == LevelState.playable);
 
     if (mounted) {
       setState(() {});
@@ -104,11 +101,7 @@ class _MapScreenState extends State<MapScreen>
           final screenH = MediaQuery.of(context).size.height;
           final topPadding =
               kToolbarHeight + MediaQuery.of(context).padding.top + 16;
-          final targetOffset =
-              firstPlayableIndex * spacing -
-              screenH / 2 +
-              spacing / 2 +
-              topPadding;
+          final targetOffset = firstPlayableIndex * spacing - screenH / 2 + spacing / 2 + topPadding;
           _scrollController.animateTo(
             targetOffset.clamp(0, _scrollController.position.maxScrollExtent),
             duration: const Duration(milliseconds: 800),
@@ -154,22 +147,36 @@ class _MapScreenState extends State<MapScreen>
 
   List<Level> _defaultLevels() => ProgressService.defaultLevels();
 
+  /// 🧭 Mở màn học hoặc LevelDetail tùy theo route
   void _openLevel(Level lv) async {
     if (lv.state == LevelState.locked) return;
     HapticFeedback.lightImpact();
 
-    final bool? completed =
-        await Navigator.pushNamed(
-              context,
-              lv.route ?? LevelDetail.routeName,
-              arguments: lv,
-            )
-            as bool?;
-
-    if (completed == true) {
+    // ✅ Nếu có route cụ thể → mở màn học
+    if (lv.route != null && lv.route!.isNotEmpty) {
+      await Navigator.pushNamed(context, lv.route!);
       await _refreshLevels();
       _confettiController.play();
+      return;
     }
+
+    // ✅ Nếu chưa có route → mở màn chi tiết (LevelDetail)
+    await Navigator.push(
+      context,
+      PageRouteBuilder(
+        opaque: false,
+        transitionDuration: const Duration(milliseconds: 500),
+        pageBuilder: (_, anim, __) => FadeTransition(
+          opacity: anim,
+          child: AppShell(
+            child: LevelDetail(key: ValueKey(lv.levelKey)),
+          ),
+        ),
+      ),
+    );
+
+    await _refreshLevels();
+    _confettiController.play();
   }
 
   @override
@@ -180,8 +187,8 @@ class _MapScreenState extends State<MapScreen>
 
     final isDark =
         Theme.of(context).brightness == Brightness.dark ||
-        DateTime.now().hour >= 18 ||
-        DateTime.now().hour < 6;
+            DateTime.now().hour >= 18 ||
+            DateTime.now().hour < 6;
 
     const double spacing = 240;
     const double nodeSize = 100;
@@ -192,9 +199,8 @@ class _MapScreenState extends State<MapScreen>
     final double topPadding =
         kToolbarHeight + MediaQuery.of(context).padding.top + 16;
 
-    return AppScaffold(
-      title: "WonderKids Vui Học Toán",
-      showBottomNav: false,
+    return Scaffold(
+      backgroundColor: AppTheme.tpDarkBg,
       body: Stack(
         children: [
           // 💫 Các node level
@@ -213,10 +219,7 @@ class _MapScreenState extends State<MapScreen>
                             ? _scrollController.offset + screenH / 2
                             : screenH / 2;
                         final distance = (levelTop - centerY).abs();
-                        final scale = (1.1 - (distance / screenH)).clamp(
-                          0.8,
-                          1.1,
-                        );
+                        final scale = (1.1 - (distance / screenH)).clamp(0.8, 1.1);
                         final opacity = (1.2 - (distance / (screenH * 0.7)))
                             .clamp(0.4, 1.0);
                         final isCenter = distance < 50;
@@ -240,16 +243,12 @@ class _MapScreenState extends State<MapScreen>
                             decoration: BoxDecoration(
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(
-                                    0xFF5E2CED,
-                                  ).withOpacity(0.5),
+                                  color: const Color(0xFF5E2CED).withOpacity(0.5),
                                   blurRadius: 40,
                                   spreadRadius: -10,
                                 ),
                                 BoxShadow(
-                                  color: const Color(
-                                    0xFFFF8B00,
-                                  ).withOpacity(0.3),
+                                  color: const Color(0xFFFF8B00).withOpacity(0.3),
                                   blurRadius: 20,
                                   spreadRadius: -5,
                                 ),
@@ -264,8 +263,8 @@ class _MapScreenState extends State<MapScreen>
 
                         final rawLeft =
                             (screenW - nodeSize) / 2 +
-                            sin(i * 0.8) * safeAmplitude -
-                            40;
+                                sin(i * 0.8) * safeAmplitude -
+                                40;
                         return Positioned(
                           top: levelTop,
                           left: rawLeft,

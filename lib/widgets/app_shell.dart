@@ -39,7 +39,7 @@ class _AppShellState extends State<AppShell> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // ✅ Nếu có child → hiển thị nội dung màn con, vẫn nằm trong AppShell
+    // ✅ Nếu có child → hiển thị màn con (LevelDetail), vẫn nằm trong AppShell
     final screen = widget.child ?? _screens[_currentIndex];
 
     return Scaffold(
@@ -60,11 +60,11 @@ class _AppShellState extends State<AppShell> {
                 colors: isDark
                     ? [
                   AppTheme.tpPurple.withOpacity(0.95),
-                  AppTheme.tpOrange.withOpacity(0.9)
+                  AppTheme.tpOrange.withOpacity(0.9),
                 ]
                     : [
                   AppTheme.tpPurple.withOpacity(0.9),
-                  AppTheme.tpLightPurple
+                  AppTheme.tpLightPurple,
                 ],
                 begin: Alignment.bottomLeft,
                 end: Alignment.topRight,

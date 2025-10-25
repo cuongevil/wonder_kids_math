@@ -1,5 +1,5 @@
 import 'dart:math';
-
+import 'dart:ui';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
@@ -7,9 +7,8 @@ import 'package:flutter/material.dart';
 import '../models/level.dart';
 import '../services/progress_service.dart';
 import '../themes/app_theme.dart';
-import '../widgets/app_shell.dart';
 
-/// 🌈 LevelDetail v4.0 — Giao diện Fintech + đồng bộ AppShell
+/// 🌈 LevelDetail 2025 v3 — Completed Logic + Unlock Next Level
 class LevelDetail extends StatefulWidget {
   static const routeName = '/level_detail';
 
@@ -36,9 +35,7 @@ class _LevelDetailState extends State<LevelDetail>
   void initState() {
     super.initState();
 
-    _confettiController = ConfettiController(
-      duration: const Duration(seconds: 3),
-    );
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _bounceController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -50,6 +47,7 @@ class _LevelDetailState extends State<LevelDetail>
       vsync: this,
       duration: const Duration(seconds: 6),
     )..repeat();
+
     _glowController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -72,6 +70,7 @@ class _LevelDetailState extends State<LevelDetail>
     _parseArgsAndLoad();
   }
 
+  /// 🔁 Load dữ liệu Level + cập nhật trạng thái khi bắt đầu
   Future<void> _parseArgsAndLoad() async {
     final loaded = await ProgressService.loadLevels();
     _levels = loaded.isEmpty
@@ -89,18 +88,35 @@ class _LevelDetailState extends State<LevelDetail>
       }
     }
 
-    _currentLevel ??= _levels.firstWhere(
-      (e) => e.levelKey == 'start',
-      orElse: () => Level(
-        index: 0,
-        title: 'Bắt đầu',
-        type: LevelType.start,
-        state: LevelState.playable,
-        levelKey: 'start',
-      ),
+    _currentLevel ??= _levels.isNotEmpty
+        ? _levels.first
+        : Level(
+      index: 0,
+      title: 'Bắt đầu',
+      type: LevelType.start,
+      state: LevelState.playable,
+      levelKey: 'start',
     );
 
     _levelIndex ??= _currentLevel?.index ?? 0;
+
+    // ✅ Nếu level bị khóa → mở ra
+    if (_currentLevel!.state == LevelState.locked) {
+      _currentLevel!.state = LevelState.playable;
+      await ProgressService.updateLevelState(
+        _currentLevel!.index,
+        LevelState.playable,
+      );
+    }
+
+    // ✅ Nếu là màn "Bắt đầu" → reset
+    if (_currentLevel!.levelKey == "start") {
+      _currentLevel!.stars = 0;
+      _currentLevel!.total = 0;
+      await ProgressService.saveLevel(_currentLevel!);
+    }
+
+    await ProgressService.saveLevels(_levels);
 
     if (mounted) setState(() {});
   }
@@ -120,13 +136,15 @@ class _LevelDetailState extends State<LevelDetail>
     final bool isStartLevel =
         (_currentLevel?.levelKey == "start") || (_levelIndex == 0);
 
-    return AppShell(
-      child: Stack(
+    return Scaffold(
+      backgroundColor: AppTheme.tpDarkBg,
+      body: Stack(
         children: [
+          _buildGradientBackground(),
           Center(
             child: isStartLevel
                 ? _buildStartScreen(context)
-                : _buildNormalLevel(context, _levelIndex ?? -1),
+                : _buildNormalLevel(context),
           ),
           Align(
             alignment: Alignment.topCenter,
@@ -168,6 +186,7 @@ class _LevelDetailState extends State<LevelDetail>
     );
   }
 
+  /// 🟣 Màn hình khởi đầu
   Widget _buildStartScreen(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -224,64 +243,21 @@ class _LevelDetailState extends State<LevelDetail>
             style: TextStyle(fontSize: 18, color: Colors.white70),
           ),
           const SizedBox(height: 50),
-          AnimatedBuilder(
-            animation: _glowController,
-            builder: (context, child) {
-              final glow = _glowController.value;
-              return Container(
-                decoration: BoxDecoration(
-                  gradient: AppTheme.primaryGradient,
-                  borderRadius: BorderRadius.circular(40),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.tpPurple.withOpacity(0.4),
-                      blurRadius: 25 * glow,
-                    ),
-                    BoxShadow(
-                      color: AppTheme.tpOrange.withOpacity(0.3),
-                      blurRadius: 20 * glow,
-                    ),
-                  ],
-                ),
-                child: ElevatedButton.icon(
-                  icon: const Icon(
-                    Icons.play_arrow,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                  label: const Text(
-                    "Bắt đầu thôi!",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    minimumSize: const Size(220, 60),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(40),
-                    ),
-                  ),
-                  onPressed: () async {
-                    _confettiController.play();
-                    await _player.play(AssetSource("audios/crown.mp3"));
-                    await ProgressService.markLevelCompleted("start");
+          _buildActionButton(
+            label: "Bắt đầu thôi!",
+            icon: Icons.play_arrow_rounded,
+            color: AppTheme.tpPurple,
+            onPressed: () async {
+              _confettiController.play();
+              await _player.play(AssetSource("audios/crown.mp3"));
+              await Future.delayed(const Duration(milliseconds: 600));
 
-                    _levels = await ProgressService.loadLevels();
-                    if (_levels.length > 1) {
-                      final next = _levels[1];
-                      if ((next.route ?? '').isNotEmpty) {
-                        await Future.delayed(const Duration(milliseconds: 600));
-                        if (!mounted) return;
-                        Navigator.pushReplacementNamed(
-                          context,
-                          next.route!,
-                          arguments: next,
-                        );
-                      }
-                    }
-                  },
-                ),
-              );
+              // ✅ Khi nhấn “Bắt đầu thôi!”, coi như hoàn thành màn Start
+              // → đánh dấu completed + mở khóa màn tiếp theo
+              await ProgressService.markLevelCompleted("start");
+
+              if (!mounted) return;
+              Navigator.pop(context, true);
             },
           ),
         ],
@@ -289,7 +265,13 @@ class _LevelDetailState extends State<LevelDetail>
     );
   }
 
-  Widget _buildNormalLevel(BuildContext context, int levelIndex) {
+  /// 🧩 Màn chơi bình thường
+  Widget _buildNormalLevel(BuildContext context) {
+    final level = _currentLevel;
+    if (level == null) return const SizedBox();
+
+    final isCompleted = level.state == LevelState.completed;
+
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -299,7 +281,7 @@ class _LevelDetailState extends State<LevelDetail>
             shaderCallback: (rect) =>
                 AppTheme.primaryGradient.createShader(rect),
             child: Text(
-              "Màn chơi ${_currentLevel?.title ?? levelIndex}",
+              level.title,
               style: const TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -308,17 +290,24 @@ class _LevelDetailState extends State<LevelDetail>
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            "Chưa có nội dung game cụ thể.\nBạn có thể hoàn thành thủ công.",
+          Text(
+            isCompleted
+                ? "Bạn đã hoàn thành màn này 🎉"
+                : "Chưa có nội dung game cụ thể.\nBạn có thể hoàn thành thủ công.",
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.white70),
+            style: const TextStyle(fontSize: 16, color: Colors.white70),
           ),
           const SizedBox(height: 30),
+
           ElevatedButton.icon(
-            icon: const Icon(Icons.check_circle, color: Colors.white),
-            label: const Text("Hoàn thành Level"),
+            icon: Icon(
+              isCompleted ? Icons.check_circle : Icons.flag_rounded,
+              color: Colors.white,
+            ),
+            label: Text(isCompleted ? "Quay lại bản đồ" : "Hoàn thành Level"),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.tpOrange,
+              backgroundColor:
+              isCompleted ? Colors.grey : AppTheme.tpOrange,
               minimumSize: const Size(220, 55),
               elevation: 6,
               shadowColor: AppTheme.tpOrange.withOpacity(0.4),
@@ -326,12 +315,28 @@ class _LevelDetailState extends State<LevelDetail>
                 borderRadius: BorderRadius.circular(30),
               ),
             ),
-            onPressed: () => _completeLevel(context),
+            onPressed: () async {
+              if (isCompleted) {
+                Navigator.pop(context, true);
+                return;
+              }
+
+              _confettiController.play();
+              await _player.play(AssetSource("audios/crown.mp3"));
+              await Future.delayed(const Duration(milliseconds: 500));
+
+              // ✅ Chuyển thành completed + mở khóa kế tiếp
+              await ProgressService.markLevelCompleted(level.levelKey!);
+
+              if (!mounted) return;
+              Navigator.pop(context, true);
+            },
           ),
           const SizedBox(height: 20),
+
           OutlinedButton.icon(
             icon: const Icon(Icons.arrow_back),
-            label: const Text("Quay lại"),
+            label: const Text("Quay lại bản đồ"),
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.white70,
               side: const BorderSide(color: Colors.white38),
@@ -346,48 +351,54 @@ class _LevelDetailState extends State<LevelDetail>
     );
   }
 
-  Future<void> _completeLevel(BuildContext context) async {
-    _confettiController.play();
-    await _player.play(AssetSource("audios/crown.mp3"));
-    final key = _currentLevel?.levelKey ?? '';
-    if (key.isNotEmpty) await ProgressService.markLevelCompleted(key);
-
-    _levels = await ProgressService.loadLevels();
-    final nextIdx = (_currentLevel?.index ?? -1) + 1;
-
-    await showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: Colors.black87,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Icon(Icons.emoji_events, color: Colors.amber, size: 60),
-            SizedBox(height: 12),
-            Text(
-              "Hoàn thành xuất sắc!",
-              style: TextStyle(fontSize: 20, color: Colors.white),
+  /// 🌟 Nút hành động Gradient + Glow
+  Widget _buildActionButton({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return AnimatedBuilder(
+      animation: _glowController,
+      builder: (context, child) {
+        final glow = _glowController.value;
+        return Container(
+          decoration: BoxDecoration(
+            gradient: AppTheme.primaryGradient,
+            borderRadius: BorderRadius.circular(40),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.4 * glow),
+                blurRadius: 25 * glow,
+              ),
+              BoxShadow(
+                color: AppTheme.tpOrange.withOpacity(0.3 * glow),
+                blurRadius: 20 * glow,
+              ),
+            ],
+          ),
+          child: ElevatedButton.icon(
+            icon: Icon(icon, color: Colors.white, size: 26),
+            label: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            SizedBox(height: 8),
-            Text(
-              "Đã mở khóa level tiếp theo 🎯",
-              style: TextStyle(color: Colors.white70),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              minimumSize: const Size(220, 60),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(40),
+              ),
             ),
-          ],
-        ),
-      ),
+            onPressed: onPressed,
+          ),
+        );
+      },
     );
-
-    if (nextIdx >= 0 && nextIdx < _levels.length) {
-      final next = _levels[nextIdx];
-      if ((next.route ?? '').isNotEmpty) {
-        Navigator.pushReplacementNamed(context, next.route!, arguments: next);
-        return;
-      }
-    }
-
-    Navigator.pop(context, true);
   }
 
   Widget _buildSparkle(double radius, double speed, Color color) {
