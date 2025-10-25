@@ -32,7 +32,6 @@ import 'package:wonderkids.math/screens/game_addition100.dart';
 import 'package:wonderkids.math/screens/game_subtraction100.dart';
 import 'package:wonderkids.math/screens/game_shapes.dart';
 import 'package:wonderkids.math/screens/game_measure_time.dart';
-import 'package:wonderkids.math/screens/game_final_boss.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

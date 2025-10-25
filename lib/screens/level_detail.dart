@@ -1,3 +1,4 @@
+// 📄 lib/screens/level_detail.dart
 import 'dart:math';
 import 'dart:ui';
 import 'package:audioplayers/audioplayers.dart';
@@ -8,10 +9,10 @@ import '../models/level.dart';
 import '../services/progress_service.dart';
 import '../themes/app_theme.dart';
 
-/// 🌈 LevelDetail 2025 v3 — Completed Logic + Unlock Next Level
+/// 🌈 LevelDetail 2025 — CHỈ render nội dung màn chơi
+/// ⚠️ KHÔNG bọc AppShell ở đây để tránh “double shell” → bug chỉ về Map
 class LevelDetail extends StatefulWidget {
   static const routeName = '/level_detail';
-
   const LevelDetail({super.key});
 
   @override
@@ -70,7 +71,7 @@ class _LevelDetailState extends State<LevelDetail>
     _parseArgsAndLoad();
   }
 
-  /// 🔁 Load dữ liệu Level + cập nhật trạng thái khi bắt đầu
+  /// 🔁 Load dữ liệu Level + cập nhật trạng thái ban đầu
   Future<void> _parseArgsAndLoad() async {
     final loaded = await ProgressService.loadLevels();
     _levels = loaded.isEmpty
@@ -109,7 +110,7 @@ class _LevelDetailState extends State<LevelDetail>
       );
     }
 
-    // ✅ Nếu là màn "Bắt đầu" → reset
+    // ✅ Nếu là màn “Bắt đầu” → reset
     if (_currentLevel!.levelKey == "start") {
       _currentLevel!.stars = 0;
       _currentLevel!.total = 0;
@@ -136,6 +137,7 @@ class _LevelDetailState extends State<LevelDetail>
     final bool isStartLevel =
         (_currentLevel?.levelKey == "start") || (_levelIndex == 0);
 
+    // ❗️KHÔNG bọc AppShell — để Shell gốc của app vẫn là duy nhất
     return Scaffold(
       backgroundColor: AppTheme.tpDarkBg,
       body: Stack(
@@ -166,6 +168,7 @@ class _LevelDetailState extends State<LevelDetail>
     );
   }
 
+  // 🌈 Nền gradient động fintech
   Widget _buildGradientBackground() {
     return Positioned.fill(
       child: AnimatedContainer(
@@ -186,7 +189,7 @@ class _LevelDetailState extends State<LevelDetail>
     );
   }
 
-  /// 🟣 Màn hình khởi đầu
+  // 🟣 Màn hình khởi đầu
   Widget _buildStartScreen(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -252,12 +255,11 @@ class _LevelDetailState extends State<LevelDetail>
               await _player.play(AssetSource("audios/crown.mp3"));
               await Future.delayed(const Duration(milliseconds: 600));
 
-              // ✅ Khi nhấn “Bắt đầu thôi!”, coi như hoàn thành màn Start
-              // → đánh dấu completed + mở khóa màn tiếp theo
+              // ✅ Hoàn thành màn start → mở khóa level tiếp theo
               await ProgressService.markLevelCompleted("start");
 
               if (!mounted) return;
-              Navigator.pop(context, true);
+              Navigator.pop(context, true); // quay về Shell gốc (tab giữ nguyên)
             },
           ),
         ],
@@ -265,7 +267,7 @@ class _LevelDetailState extends State<LevelDetail>
     );
   }
 
-  /// 🧩 Màn chơi bình thường
+  // 🧩 Màn Level thông thường
   Widget _buildNormalLevel(BuildContext context) {
     final level = _currentLevel;
     if (level == null) return const SizedBox();
@@ -298,7 +300,6 @@ class _LevelDetailState extends State<LevelDetail>
             style: const TextStyle(fontSize: 16, color: Colors.white70),
           ),
           const SizedBox(height: 30),
-
           ElevatedButton.icon(
             icon: Icon(
               isCompleted ? Icons.check_circle : Icons.flag_rounded,
@@ -306,8 +307,7 @@ class _LevelDetailState extends State<LevelDetail>
             ),
             label: Text(isCompleted ? "Quay lại bản đồ" : "Hoàn thành Level"),
             style: ElevatedButton.styleFrom(
-              backgroundColor:
-              isCompleted ? Colors.grey : AppTheme.tpOrange,
+              backgroundColor: isCompleted ? Colors.grey : AppTheme.tpOrange,
               minimumSize: const Size(220, 55),
               elevation: 6,
               shadowColor: AppTheme.tpOrange.withOpacity(0.4),
@@ -325,15 +325,14 @@ class _LevelDetailState extends State<LevelDetail>
               await _player.play(AssetSource("audios/crown.mp3"));
               await Future.delayed(const Duration(milliseconds: 500));
 
-              // ✅ Chuyển thành completed + mở khóa kế tiếp
+              // ✅ Đánh dấu hoàn thành + mở khóa kế tiếp
               await ProgressService.markLevelCompleted(level.levelKey!);
 
               if (!mounted) return;
-              Navigator.pop(context, true);
+              Navigator.pop(context, true); // trở về AppShell gốc
             },
           ),
           const SizedBox(height: 20),
-
           OutlinedButton.icon(
             icon: const Icon(Icons.arrow_back),
             label: const Text("Quay lại bản đồ"),
@@ -351,7 +350,7 @@ class _LevelDetailState extends State<LevelDetail>
     );
   }
 
-  /// 🌟 Nút hành động Gradient + Glow
+  // 🌟 Nút hành động gradient + glow mềm
   Widget _buildActionButton({
     required String label,
     required IconData icon,
@@ -381,10 +380,7 @@ class _LevelDetailState extends State<LevelDetail>
             icon: Icon(icon, color: Colors.white, size: 26),
             label: Text(
               label,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.transparent,
@@ -401,6 +397,7 @@ class _LevelDetailState extends State<LevelDetail>
     );
   }
 
+  // ✨ Hiệu ứng sao quay quanh mascot
   Widget _buildSparkle(double radius, double speed, Color color) {
     return AnimatedBuilder(
       animation: _sparkleController,

@@ -6,20 +6,22 @@ import '../screens/map_screen.dart';
 import '../screens/leaderboard_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/setting_screen.dart';
+import '../services/app_shell_controller.dart';
 
-/// 💎 AppShell 2025 — khung giao diện chính fintech, có thể dùng cho cả màn con
+/// 💎 AppShell 2025 — hoạt động đúng với Global Controller
+/// - Khi bấm tab → cập nhật controller toàn cục
+/// - Khi đang ở LevelDetail → pop và hiển thị đúng tab mong muốn
 class AppShell extends StatefulWidget {
-  final Widget? child; // ✅ cho phép hiển thị màn phụ bên trong (LevelDetail)
-  final int initialIndex;
+  final Widget? child;
 
-  const AppShell({super.key, this.child, this.initialIndex = 0});
+  const AppShell({super.key, this.child});
 
   @override
   State<AppShell> createState() => _AppShellState();
 }
 
 class _AppShellState extends State<AppShell> {
-  int _currentIndex = 0;
+  final controller = AppShellController.instance;
 
   final List<Widget> _screens = const [
     MapScreen(),
@@ -31,23 +33,42 @@ class _AppShellState extends State<AppShell> {
   @override
   void initState() {
     super.initState();
-    _currentIndex = widget.initialIndex;
+    controller.addListener(_onTabChanged);
+  }
+
+  void _onTabChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    controller.removeListener(_onTabChanged);
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool hasChild = widget.child != null;
+    final int currentIndex = controller.currentIndex;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
-    // ✅ Nếu có child → hiển thị màn con (LevelDetail), vẫn nằm trong AppShell
-    final screen = widget.child ?? _screens[_currentIndex];
 
     return Scaffold(
       extendBody: true,
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 400),
         switchInCurve: Curves.easeInOutCubic,
-        child: screen,
+        child: Stack(
+          key: ValueKey<int>(currentIndex),
+          children: [
+            _screens[currentIndex],
+            if (hasChild)
+              IgnorePointer(
+                ignoring: false,
+                child: widget.child!,
+              ),
+          ],
+        ),
       ),
       bottomNavigationBar: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -78,14 +99,22 @@ class _AppShellState extends State<AppShell> {
               ],
             ),
             child: AnimatedBottomNavBar(
-              currentIndex: _currentIndex,
-              onTap: (i) => setState(() => _currentIndex = i),
+              currentIndex: currentIndex,
               icons: const [
                 Icons.map_rounded,
                 Icons.leaderboard_rounded,
                 Icons.person_rounded,
                 Icons.settings_rounded,
               ],
+              onTap: (index) {
+                // 🔹 Cập nhật tab toàn cục
+                controller.changeTab(index);
+
+                // 🔹 Nếu đang ở màn con → pop ra
+                if (hasChild && Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+              },
             ),
           ),
         ),
