@@ -2,19 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:ui';
-
 import 'package:audioplayers/audioplayers.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../models/level.dart';
 import '../services/progress_service.dart';
-import '../widgets/wow_card.dart';
-import 'base_screen.dart';
 
-/// 🌟 LearnNumbers100Screen v6.0 — Fintech Confetti + Gradient Popup + Fixed Star Logic
+/// 🌟 LearnNumbers100Screen v7.3 — Gradient Shimmer CTA + TPBank Blur Popup
 class LearnNumbers100Screen extends StatefulWidget {
   const LearnNumbers100Screen({super.key});
 
@@ -34,20 +30,29 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
   final AudioPlayer _player = AudioPlayer();
   late ConfettiController _confettiController;
   late ConfettiController _miniConfettiController;
+  late AnimationController _shimmerController;
+  late AnimationController _tapScaleController;
 
   @override
   void initState() {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _miniConfettiController = ConfettiController(duration: const Duration(seconds: 1));
+    _shimmerController =
+    AnimationController(vsync: this, duration: const Duration(seconds: 2))
+      ..repeat(reverse: true);
+    _tapScaleController = AnimationController(
+      vsync: this,
+      lowerBound: 0.95,
+      upperBound: 1.0,
+      duration: const Duration(milliseconds: 150),
+    )..value = 1.0;
     _initData();
   }
 
   Future<void> _initData() async {
     await _loadNumbers();
     await _loadProgress();
-
-    // ✅ Chỉ đánh dấu khi chưa có dữ liệu
     if (numbers.isNotEmpty && learnedIndexes.isEmpty) {
       _markLearned(0, playReward: false);
     }
@@ -81,18 +86,12 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
 
   Future<void> _markLearned(int index, {bool playReward = true}) async {
     final key = index.toString();
-
-    // ✅ Không tăng lại nếu đã học
     if (learnedIndexes.containsKey(key)) return;
-
     learnedIndexes[key] = true;
     totalStars = learnedIndexes.length;
     setState(() {});
     unawaited(_saveProgress());
-
     if (playReward) _miniConfettiController.play();
-
-    // 🎯 Khi học xong toàn bộ
     if (learnedIndexes.length >= numbers.length && !isFinalRewardShown) {
       await _onAllLearned();
     }
@@ -104,10 +103,8 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
     try {
       await _player.play(AssetSource("audio/victory.mp3"));
     } catch (_) {}
-
     final levels = await ProgressService.loadLevels();
     final currentIdx = levels.indexWhere((lv) => lv.levelKey == levelKey);
-
     if (currentIdx != -1) {
       levels[currentIdx].state = LevelState.completed;
       if (currentIdx + 1 < levels.length &&
@@ -117,23 +114,21 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
       await ProgressService.saveLevels(levels);
       await ProgressService.markLevelCompleted(levelKey);
     }
-
     await _setFinalRewardShown();
-    setState(() {});
     _showFinalPopup();
   }
 
   void _next() {
     if (currentIndex < numbers.length - 1) {
+      _onTapFeedback();
       setState(() => currentIndex++);
-      _markLearned(currentIndex);
-    } else {
       _markLearned(currentIndex);
     }
   }
 
   void _prev() {
     if (currentIndex > 0) {
+      _onTapFeedback();
       setState(() => currentIndex--);
       _markLearned(currentIndex, playReward: false);
     }
@@ -149,152 +144,22 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
     try {
       await _player.play(AssetSource("audio/random.mp3"));
     } catch (_) {}
+    _onTapFeedback();
     setState(() => currentIndex = newIndex);
     _markLearned(currentIndex);
   }
 
+  void _onTapFeedback() {
+    HapticFeedback.selectionClick();
+    _tapScaleController.reverse().then((_) => _tapScaleController.forward());
+  }
+
   Future<void> _playAudio(String path) async {
     await _player.stop();
+    _onTapFeedback();
     try {
       await _player.play(AssetSource(path.replaceFirst('assets/', '')));
     } catch (_) {}
-  }
-
-  /// 🎊 Popup hoàn thành kiểu TPBank Fintech
-  void _showFinalPopup() {
-    final size = MediaQuery.of(context).size;
-
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierLabel: '',
-      transitionDuration: const Duration(milliseconds: 400),
-      pageBuilder: (_, __, ___) => Container(),
-      transitionBuilder: (_, anim, __, ___) {
-        final scale = Tween<double>(begin: 0.8, end: 1.0)
-            .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack));
-
-        return Transform.scale(
-          scale: scale.value,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: Dialog(
-              backgroundColor: Colors.white.withOpacity(0.05),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30)),
-              insetPadding: const EdgeInsets.all(24),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(30),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.25),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // 🐱 Mascot Glow
-                    AnimatedScale(
-                      duration: const Duration(milliseconds: 600),
-                      curve: Curves.easeOutBack,
-                      scale: scale.value,
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.white.withOpacity(0.5),
-                              blurRadius: 25,
-                              spreadRadius: 10,
-                            ),
-                          ],
-                        ),
-                        child: Image.asset(
-                          "assets/images/mascot/mascot_10.png",
-                          width: size.width * 0.4,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    ShaderMask(
-                      shaderCallback: (r) => const LinearGradient(
-                        colors: [Colors.white, Color(0xFFFFE082)],
-                      ).createShader(r),
-                      child: Text(
-                        "Hoàn thành xuất sắc!",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: size.width * 0.08,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      "⭐ $totalStars / ${numbers.length} ⭐",
-                      style: TextStyle(
-                        fontSize: size.width * 0.06,
-                        color: Colors.white.withOpacity(0.9),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.pop(context, true);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 40,
-                          vertical: 16,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(25),
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0xFF5E2CED).withOpacity(0.4),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: const Text(
-                          "Quay lại bản đồ",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
   }
 
   @override
@@ -306,32 +171,186 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
     final item = numbers[currentIndex];
     final size = MediaQuery.of(context).size;
 
-    return BaseScreen(
-      title: "🌟 Số 0–100 🌟",
-      child: Stack(
-        children: [
-          SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: EdgeInsets.only(bottom: size.height * 0.25),
-            child: Column(
-              children: [
-                _progressBar(size),
-                WowCard(imagePath: item["image"], text: item["text"]),
-                const SizedBox(height: 20),
-                _mainButton(
-                  icon: Icons.volume_up,
-                  label: "Nghe số này",
-                  color: Colors.orangeAccent,
-                  onPressed: () => _playAudio(item["audio"]),
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white.withOpacity(0.05),
+        centerTitle: true,
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            child: Container(color: Colors.white.withOpacity(0.05)),
+          ),
+        ),
+        title: ShaderMask(
+          shaderCallback: (r) => const LinearGradient(
+            colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
+          ).createShader(r),
+          child: const Text(
+            "Học số 0–100",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 22,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.only(top: 100, bottom: size.height * 0.25),
+        child: Column(
+          children: [
+            _progressBar(size),
+            const SizedBox(height: 20),
+            _buildShimmerCard(item, size),
+            const SizedBox(height: 30),
+            _animatedCTA(size, item),
+            const SizedBox(height: 25),
+            _navigationButtons(size),
+            _buildConfetti(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Card chữ auto-scale
+  Widget _buildShimmerCard(dynamic item, Size size) {
+    final shimmerVal = _shimmerController.value;
+    final offset = (shimmerVal * 2 - 1);
+    final text = item["text"] ?? "";
+    final isLongText = text.length > 6;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutBack,
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF7B4FFF), Color(0xFFFF8B00)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 20,
+            spreadRadius: 2,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            Image.asset(item["image"], width: size.width * 0.55),
+            const SizedBox(height: 16),
+            ShaderMask(
+              shaderCallback: (r) => LinearGradient(
+                begin: Alignment(-1.0 + offset, 0),
+                end: Alignment(1.0 + offset, 0),
+                colors: [
+                  Colors.white.withOpacity(0.3),
+                  Colors.white.withOpacity(0.8),
+                  Colors.white.withOpacity(0.3),
+                ],
+              ).createShader(r),
+              blendMode: BlendMode.srcATop,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    height: 1.1,
+                    fontSize: isLongText ? size.width * 0.12 : size.width * 0.18,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
                 ),
-                const SizedBox(height: 25),
-                _navigationButtons(size),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// CTA shimmer gradient
+  Widget _animatedCTA(Size size, dynamic item) {
+    return AnimatedBuilder(
+      animation: _shimmerController,
+      builder: (context, _) {
+        final shimmerValue = _shimmerController.value;
+        final offset = (shimmerValue * 2 - 1);
+        return GestureDetector(
+          onTap: () => _playAudio(item["audio"]),
+          onTapDown: (_) => _onTapFeedback(),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 40),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 30),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(30),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFF8B00).withOpacity(0.3),
+                  blurRadius: 15,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                ShaderMask(
+                  shaderCallback: (r) => LinearGradient(
+                    begin: Alignment(-1.0 + offset, 0),
+                    end: Alignment(1.0 + offset, 0),
+                    colors: [
+                      Colors.white.withOpacity(0.0),
+                      Colors.white.withOpacity(0.5),
+                      Colors.white.withOpacity(0.0),
+                    ],
+                    stops: const [0.2, 0.5, 0.8],
+                  ).createShader(r),
+                  blendMode: BlendMode.srcATop,
+                  child: Container(
+                    height: 60,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(30),
+                      color: Colors.white.withOpacity(0.1),
+                    ),
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.volume_up, color: Colors.white, size: 28),
+                    SizedBox(width: 10),
+                    Text(
+                      "Nghe số này",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
-          _buildConfetti(),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -339,47 +358,18 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
     padding: const EdgeInsets.symmetric(vertical: 10),
     child: SizedBox(
       width: size.width * 0.7,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: LinearProgressIndicator(
-              value: (totalStars / numbers.length).clamp(0, 1),
-              minHeight: size.height * 0.04,
-              backgroundColor: Colors.grey[300],
-              valueColor: const AlwaysStoppedAnimation(Color(0xFFFFC300)),
-            ),
-          ),
-          Text(
-            "⭐ $totalStars / ${numbers.length}",
-            style: TextStyle(
-              fontSize: size.width * 0.05,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-        ],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: LinearProgressIndicator(
+          value: (totalStars / numbers.length).clamp(0, 1),
+          minHeight: size.height * 0.04,
+          backgroundColor: Colors.white.withOpacity(0.2),
+          valueColor:
+          const AlwaysStoppedAnimation<Color>(Color(0xFFFFC300)),
+        ),
       ),
     ),
   );
-
-  Widget _mainButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onPressed,
-  }) =>
-      ElevatedButton.icon(
-        icon: Icon(icon, size: 30),
-        label: Text(label, style: const TextStyle(fontSize: 20)),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-        ),
-        onPressed: onPressed,
-      );
 
   Widget _navigationButtons(Size size) => Row(
     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -407,93 +397,156 @@ class _LearnNumbers100ScreenState extends State<LearnNumbers100Screen>
     );
   }
 
-  Widget _buildConfetti() {
-    return Stack(
-      children: [
-        Align(
-          alignment: Alignment.center,
-          child: ConfettiWidget(
-            confettiController: _confettiController,
-            blastDirectionality: BlastDirectionality.explosive,
-            emissionFrequency: 0.05,
-            numberOfParticles: 20,
-            maxBlastForce: 10,
-            minBlastForce: 2,
-            gravity: 0.2,
-            colors: const [
-              Color(0xFF5E2CED),
-              Color(0xFFFF8B00),
-              Color(0xFFA58CFF),
-            ],
-            particleDrag: 0.05,
-            shouldLoop: false,
-            createParticlePath: _drawStar,
-          ),
+  Widget _buildConfetti() => Stack(
+    children: [
+      Align(
+        alignment: Alignment.center,
+        child: ConfettiWidget(
+          confettiController: _confettiController,
+          blastDirectionality: BlastDirectionality.explosive,
+          emissionFrequency: 0.05,
+          numberOfParticles: 20,
+          colors: const [
+            Color(0xFF5E2CED),
+            Color(0xFFFF8B00),
+            Color(0xFFA58CFF),
+          ],
         ),
-        Align(
-          alignment: Alignment.center,
-          child: ConfettiWidget(
-            confettiController: _confettiController,
-            blastDirectionality: BlastDirectionality.explosive,
-            emissionFrequency: 0.08,
-            numberOfParticles: 40,
-            maxBlastForce: 15,
-            minBlastForce: 5,
-            gravity: 0.3,
-            colors: const [
-              Color(0xFFE4B5FF),
-              Color(0xFFFFD180),
-              Color(0xFFB388FF),
-            ],
-          ),
+      ),
+      Align(
+        alignment: Alignment.center,
+        child: ConfettiWidget(
+          confettiController: _miniConfettiController,
+          blastDirectionality: BlastDirectionality.explosive,
+          numberOfParticles: 10,
+          colors: const [
+            Color(0xFFFFC300),
+            Color(0xFF7E57C2),
+            Color(0xFFFF80AB),
+          ],
         ),
-        Align(
-          alignment: Alignment.center,
-          child: ConfettiWidget(
-            confettiController: _miniConfettiController,
-            blastDirectionality: BlastDirectionality.explosive,
-            numberOfParticles: 10,
-            maxBlastForce: 10,
-            minBlastForce: 2,
-            gravity: 0.4,
-            colors: const [
-              Color(0xFFFFC300),
-              Color(0xFF7E57C2),
-              Color(0xFFFF80AB),
-            ],
+      ),
+    ],
+  );
+
+  void _showFinalPopup() {
+    final size = MediaQuery.of(context).size;
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: '',
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (_, __, ___) => Container(),
+      transitionBuilder: (_, anim, __, ___) {
+        final scale =
+        Tween<double>(begin: 0.8, end: 1.0).animate(CurvedAnimation(
+          parent: anim,
+          curve: Curves.easeOutBack,
+        ));
+        return Transform.scale(
+          scale: scale.value,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            child: Dialog(
+              backgroundColor: Colors.white.withOpacity(0.05),
+              shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              insetPadding: const EdgeInsets.all(24),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.25),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset("assets/images/mascot/mascot_10.png",
+                        width: size.width * 0.4),
+                    const SizedBox(height: 20),
+                    ShaderMask(
+                      shaderCallback: (r) => const LinearGradient(
+                        colors: [Colors.white, Color(0xFFFFE082)],
+                      ).createShader(r),
+                      child: Text(
+                        "Hoàn thành xuất sắc!",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: size.width * 0.08,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      "⭐ $totalStars / ${numbers.length} ⭐",
+                      style: TextStyle(
+                        fontSize: size.width * 0.06,
+                        color: Colors.white.withOpacity(0.9),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pop(context, true);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 40, vertical: 16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(25),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF8B00).withOpacity(0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: const Text(
+                          "Quay lại bản đồ",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
-      ],
+        );
+      },
     );
-  }
-
-  Path _drawStar(Size size) {
-    double degToRad(double deg) => deg * (pi / 180.0);
-    const numberOfPoints = 5;
-    final halfWidth = size.width / 2;
-    final externalRadius = halfWidth;
-    final internalRadius = halfWidth / 2.5;
-    final degreesPerStep = degToRad(360 / numberOfPoints);
-    final halfDegreesPerStep = degreesPerStep / 2;
-    final path = Path();
-    final fullAngle = degToRad(360);
-    path.moveTo(size.width, halfWidth);
-
-    for (double step = 0; step < fullAngle; step += degreesPerStep) {
-      path.lineTo(halfWidth + externalRadius * cos(step),
-          halfWidth + externalRadius * sin(step));
-      path.lineTo(halfWidth + internalRadius * cos(step + halfDegreesPerStep),
-          halfWidth + internalRadius * sin(step + halfDegreesPerStep));
-    }
-
-    path.close();
-    return path;
   }
 
   @override
   void dispose() {
     _confettiController.dispose();
     _miniConfettiController.dispose();
+    _shimmerController.dispose();
+    _tapScaleController.dispose();
     _player.dispose();
     super.dispose();
   }

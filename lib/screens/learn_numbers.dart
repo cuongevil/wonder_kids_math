@@ -2,12 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:ui';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/level.dart';
 import '../services/progress_service.dart';
 
@@ -39,25 +40,34 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
-    _miniConfettiController = ConfettiController(duration: const Duration(seconds: 1));
-    _gradientController =
-    AnimationController(vsync: this, duration: const Duration(seconds: 8))
-      ..repeat(reverse: true);
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 3),
+    );
+    _miniConfettiController = ConfettiController(
+      duration: const Duration(seconds: 1),
+    );
+    _gradientController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    )..repeat(reverse: true);
     _tapScaleController = AnimationController(
       vsync: this,
       lowerBound: 0.95,
       upperBound: 1.0,
       duration: const Duration(milliseconds: 150),
     )..value = 1.0;
-    _introController =
-        AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
-    _ctaGradientController =
-    AnimationController(vsync: this, duration: const Duration(seconds: 3))
-      ..repeat(reverse: true);
-    _shimmerController =
-    AnimationController(vsync: this, duration: const Duration(seconds: 2))
-      ..repeat(reverse: true);
+    _introController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _ctaGradientController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
 
     _initData();
     Future.delayed(const Duration(milliseconds: 400), () {
@@ -198,12 +208,19 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
           final t = _gradientController.value;
           final colors = [
             Color.lerp(const Color(0xFF5E2CED), const Color(0xFFFF8B00), t)!,
-            Color.lerp(const Color(0xFFA58CFF), const Color(0xFF5E2CED), 1 - t)!,
+            Color.lerp(
+              const Color(0xFFA58CFF),
+              const Color(0xFF5E2CED),
+              1 - t,
+            )!,
           ];
 
           return Stack(
             children: [
-              AnimatedShaderMask(colors: colors, child: Container(color: Colors.white)),
+              AnimatedShaderMask(
+                colors: colors,
+                child: Container(color: Colors.white),
+              ),
               SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 padding: EdgeInsets.only(
@@ -213,13 +230,16 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
                 child: FadeTransition(
                   opacity: _introController,
                   child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.2),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: _introController,
-                      curve: Curves.easeOutCubic,
-                    )),
+                    position:
+                        Tween<Offset>(
+                          begin: const Offset(0, 0.2),
+                          end: Offset.zero,
+                        ).animate(
+                          CurvedAnimation(
+                            parent: _introController,
+                            curve: Curves.easeOutCubic,
+                          ),
+                        ),
                     child: ScaleTransition(
                       scale: _tapScaleController,
                       child: Column(
@@ -245,132 +265,175 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
     );
   }
 
-  /// ✨ Card shimmer ánh sáng quét
-  Widget _buildShimmerCard(dynamic item, Size size) {
-    return AnimatedBuilder(
-      animation: _shimmerController,
-      builder: (context, _) {
-        final shimmerValue = _shimmerController.value;
-        final offset = (shimmerValue * 2 - 1);
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.easeOutBack,
-          margin: const EdgeInsets.symmetric(horizontal: 24),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(30),
-            gradient: const LinearGradient(
-              colors: [Color(0xFF7B4FFF), Color(0xFFFF8B00)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.25),
-                blurRadius: 20,
-                spreadRadius: 2,
-                offset: const Offset(0, 8),
-              ),
-            ],
+  Widget _buildShimmerCard(dynamic item, Size size) => AnimatedBuilder(
+    animation: _shimmerController,
+    builder: (context, _) {
+      final shimmerValue = _shimmerController.value;
+      final offset = (shimmerValue * 2 - 1);
+      final text = item["text"] ?? "";
+      final isLongText =
+          text.length > 6; // nếu 2 từ như “mười một”, “mười chín”
+
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeOutBack,
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF7B4FFF), Color(0xFFFF8B00)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                Image.asset(item["image"], width: size.width * 0.6),
-                const SizedBox(height: 20),
-                ShaderMask(
-                  shaderCallback: (r) => LinearGradient(
-                    begin: Alignment(-1.0 + offset, 0),
-                    end: Alignment(1.0 + offset, 0),
-                    colors: [
-                      Colors.white.withOpacity(0.3),
-                      Colors.white.withOpacity(0.8),
-                      Colors.white.withOpacity(0.3),
-                    ],
-                    stops: const [0.2, 0.5, 0.8],
-                  ).createShader(r),
-                  blendMode: BlendMode.srcATop,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 20,
+              spreadRadius: 2,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(item["image"], width: size.width * 0.55),
+              const SizedBox(height: 16),
+
+              // ✨ Chữ tự co giãn khi dài
+              ShaderMask(
+                shaderCallback: (r) => LinearGradient(
+                  begin: Alignment(-1.0 + offset, 0),
+                  end: Alignment(1.0 + offset, 0),
+                  colors: [
+                    Colors.white.withOpacity(0.3),
+                    Colors.white.withOpacity(0.8),
+                    Colors.white.withOpacity(0.3),
+                  ],
+                  stops: const [0.2, 0.5, 0.8],
+                ).createShader(r),
+                blendMode: BlendMode.srcATop,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
                   child: Text(
-                    item["text"],
+                    text,
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: size.width * 0.2,
-                      fontWeight: FontWeight.bold,
+                      height: 1.1,
+                      fontSize: isLongText
+                          ? size.width * 0.12
+                          : size.width * 0.18,
+                      fontWeight: FontWeight.w900,
                       color: Colors.white,
                     ),
                   ),
                 ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+
+  Widget _animatedCTA(Size size, dynamic item) => AnimatedBuilder(
+    animation: Listenable.merge([_ctaGradientController, _shimmerController]),
+    builder: (context, _) {
+      final t = _ctaGradientController.value;
+      final s = _shimmerController.value;
+      final start = Color.lerp(
+        const Color(0xFF5E2CED),
+        const Color(0xFFFF8B00),
+        t,
+      )!;
+      final end = Color.lerp(
+        const Color(0xFFFF8B00),
+        const Color(0xFFA58CFF),
+        1 - t,
+      )!;
+      final shimmerPos = (s * 2 - 1);
+
+      return GestureDetector(
+        onTap: () => _playAudio(item["audio"]),
+        child: ScaleTransition(
+          scale: _tapScaleController,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 60),
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(40),
+              gradient: LinearGradient(
+                colors: [start, end],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: start.withOpacity(0.5),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+                BoxShadow(
+                  color: end.withOpacity(0.3),
+                  blurRadius: 30,
+                  offset: const Offset(0, 8),
+                ),
               ],
             ),
-          ),
-        );
-      },
-    );
-  }
-
-  /// ✨ CTA gradient + shimmer ánh sáng
-  Widget _animatedCTA(Size size, dynamic item) {
-    return FadeTransition(
-      opacity: CurvedAnimation(
-        parent: _introController,
-        curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
-      ),
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.3),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(
-          parent: _introController,
-          curve: const Interval(0.4, 1.0, curve: Curves.easeOutCubic),
-        )),
-        child: AnimatedBuilder(
-          animation: Listenable.merge([_ctaGradientController, _shimmerController]),
-          builder: (context, _) {
-            final t = _ctaGradientController.value;
-            final s = _shimmerController.value;
-            final start = Color.lerp(const Color(0xFF5E2CED), const Color(0xFFFF8B00), t)!;
-            final end = Color.lerp(const Color(0xFFFF8B00), const Color(0xFFA58CFF), 1 - t)!;
-            final shimmerPosition = (s * 2 - 1);
-            return Stack(
+            child: Stack(
               alignment: Alignment.center,
               children: [
-                _mainButton(
-                  icon: Icons.volume_up,
-                  label: "Nghe số này",
-                  colors: [start, end],
-                  onPressed: () => _playAudio(item["audio"]),
-                ),
+                // 🌈 Lớp ánh sáng shimmer quét
                 IgnorePointer(
                   child: ShaderMask(
-                    shaderCallback: (r) {
-                      return LinearGradient(
-                        begin: Alignment(-1.0 + shimmerPosition, 0.0),
-                        end: Alignment(shimmerPosition + 1.0, 0.0),
-                        colors: [
-                          Colors.white.withOpacity(0.0),
-                          Colors.white.withOpacity(0.7),
-                          Colors.white.withOpacity(0.0),
-                        ],
-                        stops: const [0.2, 0.5, 0.8],
-                      ).createShader(r);
-                    },
+                    shaderCallback: (r) => LinearGradient(
+                      begin: Alignment(-1.0 + shimmerPos, 0.0),
+                      end: Alignment(shimmerPos + 1.0, 0.0),
+                      colors: [
+                        Colors.white.withOpacity(0.0),
+                        Colors.white.withOpacity(0.7),
+                        Colors.white.withOpacity(0.0),
+                      ],
+                      stops: const [0.2, 0.5, 0.8],
+                    ).createShader(r),
                     blendMode: BlendMode.srcATop,
                     child: Container(
                       width: double.infinity,
                       height: 60,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(30),
-                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(40),
+                        color: Colors.white.withOpacity(0.05),
                       ),
                     ),
                   ),
                 ),
+
+                // 🔊 Nội dung nút
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.volume_up, color: Colors.white, size: 28),
+                    SizedBox(width: 10),
+                    Text(
+                      "Nghe số này",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
               ],
-            );
-          },
+            ),
+          ),
         ),
-      ),
-    );
-  }
+      );
+    },
+  );
 
   PreferredSizeWidget _blurAppBar() => AppBar(
     elevation: 0,
@@ -455,11 +518,11 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
   );
 
   Widget _circleButton(
-      IconData icon,
-      VoidCallback onTap,
-      Color color,
-      Size size,
-      ) {
+    IconData icon,
+    VoidCallback onTap,
+    Color color,
+    Size size,
+  ) {
     return Ink(
       decoration: ShapeDecoration(shape: const CircleBorder(), color: color),
       child: IconButton(
@@ -484,8 +547,7 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
             value: (totalStars / numbers.length).clamp(0, 1),
             minHeight: size.height * 0.04,
             backgroundColor: Colors.white.withOpacity(0.2),
-            valueColor:
-            const AlwaysStoppedAnimation<Color>(Color(0xFFFFC300)),
+            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFFC300)),
           ),
         ),
       ),
@@ -524,131 +586,109 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
     ],
   );
 
-  /// 🎉 Popup chúc mừng hoàn thành (ánh sáng trượt)
   void _showFinalPopup() {
     final size = MediaQuery.of(context).size;
     showGeneralDialog(
       context: context,
       barrierDismissible: false,
       barrierLabel: '',
-      transitionDuration: const Duration(milliseconds: 500),
+      transitionDuration: const Duration(milliseconds: 400),
       pageBuilder: (_, __, ___) => Container(),
       transitionBuilder: (_, anim, __, ___) {
-        final scale = Tween<double>(begin: 0.8, end: 1.0).animate(
-          CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
-        );
+        final scale = Tween<double>(begin: 0.8, end: 1.0)
+            .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack));
         return Transform.scale(
           scale: scale.value,
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
             child: Dialog(
               backgroundColor: Colors.white.withOpacity(0.05),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
-              ),
+                  borderRadius: BorderRadius.circular(30)),
               insetPadding: const EdgeInsets.all(24),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  AnimatedBuilder(
-                    animation: _shimmerController,
-                    builder: (context, _) {
-                      final shimmerVal = _shimmerController.value;
-                      final offset = (shimmerVal * 2 - 1);
-                      return ShaderMask(
-                        shaderCallback: (r) => LinearGradient(
-                          begin: Alignment(-1.0 + offset, 0),
-                          end: Alignment(1.0 + offset, 0),
-                          colors: [
-                            Colors.white.withOpacity(0.0),
-                            Colors.white.withOpacity(0.25),
-                            Colors.white.withOpacity(0.0),
-                          ],
-                          stops: const [0.2, 0.5, 0.8],
-                        ).createShader(r),
-                        blendMode: BlendMode.srcATop,
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.all(Radius.circular(30)),
-                          ),
-                        ),
-                      );
-                    },
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Image.asset("assets/images/mascot/mascot_10.png",
-                            width: size.width * 0.4),
-                        const SizedBox(height: 20),
-                        ShaderMask(
-                          shaderCallback: (r) => const LinearGradient(
-                            colors: [Colors.white, Color(0xFFFFE082)],
-                          ).createShader(r),
-                          child: const Text(
-                            "Hoàn thành xuất sắc!",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          "⭐ $totalStars / ${numbers.length} ⭐",
-                          style: TextStyle(
-                            fontSize: size.width * 0.06,
-                            color: Colors.white.withOpacity(0.9),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.pop(context);
-                            Navigator.pop(context, true);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 40,
-                              vertical: 16,
-                            ),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(25),
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.orangeAccent.withOpacity(0.3),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 6),
-                                ),
-                              ],
-                            ),
-                            child: const Text(
-                              "Quay lại bản đồ",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.25),
+                      blurRadius: 20,
+                      spreadRadius: 5,
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset("assets/images/mascot/mascot_10.png",
+                        width: size.width * 0.4),
+                    const SizedBox(height: 20),
+                    ShaderMask(
+                      shaderCallback: (r) => const LinearGradient(
+                        colors: [Colors.white, Color(0xFFFFE082)],
+                      ).createShader(r),
+                      child: Text(
+                        "Hoàn thành xuất sắc!",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: size.width * 0.08,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      "⭐ $totalStars / ${numbers.length} ⭐",
+                      style: TextStyle(
+                        fontSize: size.width * 0.06,
+                        color: Colors.white.withOpacity(0.9),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pop(context, true);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(25),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF8B00).withOpacity(0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: const Text(
+                          "Quay lại bản đồ",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -675,7 +715,11 @@ class AnimatedShaderMask extends StatelessWidget {
   final List<Color> colors;
   final Widget child;
 
-  const AnimatedShaderMask({super.key, required this.colors, required this.child});
+  const AnimatedShaderMask({
+    super.key,
+    required this.colors,
+    required this.child,
+  });
 
   @override
   Widget build(BuildContext context) {
