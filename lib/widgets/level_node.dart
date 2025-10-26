@@ -1,6 +1,8 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../models/level.dart';
 import '../themes/app_theme.dart';
 
@@ -26,31 +28,21 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
   late final AnimationController _sparkleController;
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnim;
-
   bool _isVisible = true;
 
   @override
   void initState() {
     super.initState();
-
-    // ✨ Sparkle animation quanh node
     _sparkleController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 6),
     )..repeat();
-
-    // 💓 Pulse animation (scale nhẹ)
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
-
-    // ✅ FIX: dùng Tween để giữ giá trị scale trong khoảng [0.95–1.05]
     _pulseAnim = Tween(begin: 0.95, end: 1.05).animate(
-      CurvedAnimation(
-        parent: _pulseController,
-        curve: Curves.easeInOut,
-      ),
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
   }
 
@@ -61,7 +53,6 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  /// ✨ Hiệu ứng sparkle xoay quanh node
   Widget _buildSparkle(double radius, double speed, double size, Color color) {
     return AnimatedBuilder(
       animation: _sparkleController,
@@ -80,8 +71,6 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final isLocked = widget.level.state == LevelState.locked;
-
-    // 🌈 Gradient fintech chuẩn TPBank
     final gradient = isLocked
         ? const LinearGradient(colors: [Colors.grey, Colors.black26])
         : AppTheme.primaryGradient;
@@ -105,10 +94,9 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
 
     return NotificationListener<ScrollNotification>(
       onNotification: (scroll) {
-        // 🧠 Khi node không còn visible trên màn hình, tạm dừng animation
         final visible =
             scroll.metrics.pixels <= scroll.metrics.maxScrollExtent &&
-                scroll.metrics.pixels >= scroll.metrics.minScrollExtent;
+            scroll.metrics.pixels >= scroll.metrics.minScrollExtent;
         if (_isVisible != visible) {
           setState(() => _isVisible = visible);
           if (visible) {
@@ -122,17 +110,20 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
         return false;
       },
       child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
         onTap: isLocked
             ? null
             : () {
-          HapticFeedback.lightImpact();
-          widget.onTap();
-        },
+                HapticFeedback.lightImpact();
+                widget.onTap();
+              },
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ScaleTransition(
-              scale: widget.isCenter ? _pulseAnim : const AlwaysStoppedAnimation(1),
+              scale: widget.isCenter
+                  ? _pulseAnim
+                  : const AlwaysStoppedAnimation(1),
               child: Container(
                 width: 120,
                 height: 120,
@@ -157,8 +148,18 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
                   children: [
                     if (!isLocked && _isVisible) ...[
                       _buildSparkle(55, 1.0, 8, Colors.white.withOpacity(0.7)),
-                      _buildSparkle(75, -1.2, 10, Colors.yellowAccent.withOpacity(0.8)),
-                      _buildSparkle(90, 0.8, 12, Colors.orangeAccent.withOpacity(0.6)),
+                      _buildSparkle(
+                        75,
+                        -1.2,
+                        10,
+                        Colors.yellowAccent.withOpacity(0.8),
+                      ),
+                      _buildSparkle(
+                        90,
+                        0.8,
+                        12,
+                        Colors.orangeAccent.withOpacity(0.6),
+                      ),
                     ],
                     Container(
                       width: 88,
@@ -209,10 +210,7 @@ class _LevelNodeState extends State<LevelNode> with TickerProviderStateMixin {
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                   shadows: [
-                    Shadow(
-                      color: glowColor.withOpacity(0.8),
-                      blurRadius: 10,
-                    ),
+                    Shadow(color: glowColor.withOpacity(0.8), blurRadius: 10),
                     const Shadow(
                       color: Colors.black54,
                       blurRadius: 4,
