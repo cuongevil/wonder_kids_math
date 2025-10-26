@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/progress_service.dart';
 
-/// ➕ GameAddition100Screen v9.2 — Animated Fintech Gradient + Inline Result + Glow
+/// ➕ GameAddition100Screen v9.3 — Fintech Gradient + Glow + Confetti + Auto Reset
 class GameAddition100Screen extends StatefulWidget {
   const GameAddition100Screen({super.key});
 
@@ -31,14 +31,14 @@ class _GameAddition100ScreenState extends State<GameAddition100Screen>
 
   int correctCount = 0;
   bool isCompleted = false;
-  bool isReviewMode = false;
   bool isAnswered = false;
   bool isLoading = true;
 
   String? resultText;
   Color? resultColor;
 
-  late ConfettiController _confettiController;
+  late ConfettiController _confettiMain;
+  late ConfettiController _confettiMini;
   late AnimationController _glowController;
   late AnimationController _gradientController;
 
@@ -47,7 +47,8 @@ class _GameAddition100ScreenState extends State<GameAddition100Screen>
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+    _confettiMain = ConfettiController(duration: const Duration(seconds: 2));
+    _confettiMini = ConfettiController(duration: const Duration(seconds: 1));
     _glowController =
         AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
     _gradientController =
@@ -60,14 +61,23 @@ class _GameAddition100ScreenState extends State<GameAddition100Screen>
     _prefs = await SharedPreferences.getInstance();
     correctCount = _prefs.getInt(progressKey) ?? 0;
     isCompleted = _prefs.getBool(completedKey) ?? false;
-    isReviewMode = isCompleted;
+
+    // ✅ Reset nếu trước đó đã hoàn thành (tránh kẹt 10/10)
+    if (isCompleted) {
+      correctCount = 0;
+      isCompleted = false;
+      await _prefs.setInt(progressKey, 0);
+      await _prefs.setBool(completedKey, false);
+    }
+
     _newQuestion();
     setState(() => isLoading = false);
   }
 
   @override
   void dispose() {
-    _confettiController.dispose();
+    _confettiMain.dispose();
+    _confettiMini.dispose();
     _glowController.dispose();
     _gradientController.dispose();
     _player.dispose();
@@ -81,17 +91,21 @@ class _GameAddition100ScreenState extends State<GameAddition100Screen>
   }
 
   void _newQuestion() {
+    // Tạo phép cộng không vượt quá 100
     a = _rand.nextInt(101);
     b = _rand.nextInt(101);
     answer = a + b;
-    if (answer > 100) return _newQuestion();
-
-    options = [answer];
-    while (options.length < 3) {
-      int fake = _rand.nextInt(101);
-      if (!options.contains(fake)) options.add(fake);
+    if (answer > 100) {
+      _newQuestion();
+      return;
     }
-    options.shuffle();
+
+    // 1 đáp án đúng + 2 đáp án nhiễu trong [0..100]
+    final set = <int>{answer};
+    while (set.length < 3) {
+      set.add(_rand.nextInt(101));
+    }
+    options = set.toList()..shuffle();
 
     isAnswered = false;
     resultText = null;
@@ -101,67 +115,70 @@ class _GameAddition100ScreenState extends State<GameAddition100Screen>
 
   Future<void> _check(int value) async {
     if (isAnswered) return;
-    HapticFeedback.selectionClick();
     isAnswered = true;
-    final correct = value == answer;
+    HapticFeedback.selectionClick();
 
+    final correct = value == answer;
     if (correct) {
       await _play(praiseVoices[_rand.nextInt(praiseVoices.length)]);
-      _confettiController.play();
       _glowController.forward(from: 0);
-      setState(() {
-        resultText = "🎉 Chính xác rồi!";
-        resultColor = const Color(0xFF5E2CED);
-      });
+      _confettiMini.play();
+      resultText = "🎉 Chính xác rồi!";
+      resultColor = const Color(0xFF5E2CED);
 
-      if (!isReviewMode) {
-        correctCount++;
-        await _prefs.setInt(progressKey, correctCount);
-        if (correctCount >= 10 && !isCompleted) {
-          isCompleted = true;
-          await _prefs.setBool(completedKey, true);
-          await Future.delayed(const Duration(milliseconds: 800));
-          _showRewardPopup();
-          return;
-        }
+      correctCount++;
+      await _prefs.setInt(progressKey, correctCount);
+
+      if (correctCount >= 10 && !isCompleted) {
+        isCompleted = true;
+        await _prefs.setBool(completedKey, true);
+        await Future.delayed(const Duration(milliseconds: 600));
+        await _onCompleted();
+        return;
       }
     } else {
       await _play("wrong");
       _glowController.forward(from: 0);
-      setState(() {
-        resultText = "❌ Sai rồi — Đáp án đúng là $answer";
-        resultColor = Colors.redAccent;
-      });
+      resultText = "❌ Sai rồi — đáp án đúng là $answer";
+      resultColor = Colors.redAccent;
     }
 
+    setState(() {});
     await Future.delayed(const Duration(milliseconds: 1500));
     _newQuestion();
   }
 
-  /// 🎁 Popup hoàn thành Fintech glow
-  Future<void> _showRewardPopup() async {
+  Future<void> _onCompleted() async {
+    _confettiMain.play();
     await _play("victory");
-    _confettiController.play();
+
     await ProgressService.markLevelCompleted("addition100");
 
+    // ♻️ Reset để lần sau vào lại bắt đầu từ 0
+    await _prefs.setInt(progressKey, 0);
+    await _prefs.setBool(completedKey, false);
+
+    _showRewardPopup();
+  }
+
+  void _showRewardPopup() {
     final size = MediaQuery.of(context).size;
     showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      barrierLabel: '',
       transitionDuration: const Duration(milliseconds: 400),
-      pageBuilder: (_, __, ___) => Container(),
+      pageBuilder: (_, __, ___) => const SizedBox.shrink(),
       transitionBuilder: (_, anim, __, ___) {
         final scale = Tween<double>(begin: 0.8, end: 1.0)
             .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack));
-
         return Transform.scale(
           scale: scale.value,
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
             child: Dialog(
               backgroundColor: Colors.white.withOpacity(0.05),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
               insetPadding: const EdgeInsets.all(24),
               child: Container(
                 decoration: BoxDecoration(
@@ -171,21 +188,36 @@ class _GameAddition100ScreenState extends State<GameAddition100Screen>
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.25),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
                 ),
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset("assets/images/mascot/mascot_10.png",
-                        width: size.width * 0.4),
+                    Image.asset(
+                      "assets/images/mascot/mascot_10.png",
+                      width: size.width * 0.4,
+                    ),
                     const SizedBox(height: 20),
-                    const Text(
-                      "Bé đã hoàn thành 10 phép cộng ≤ 100! 🌟",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                    ShaderMask(
+                      shaderCallback: (r) => const LinearGradient(
+                        colors: [Colors.white, Color(0xFFFFE082)],
+                      ).createShader(r),
+                      blendMode: BlendMode.srcATop,
+                      child: const Text(
+                        "Bé đã hoàn thành 10 phép cộng ≤ 100! 🌟",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -195,22 +227,28 @@ class _GameAddition100ScreenState extends State<GameAddition100Screen>
                         Navigator.pop(context, true);
                       },
                       child: Container(
-                        padding:
-                        const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 40, vertical: 16),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(25),
                           gradient: const LinearGradient(
                             colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF8B00).withOpacity(0.4),
+                              blurRadius: 20,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
                         ),
                         child: const Text(
                           "Quay lại bản đồ",
                           style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
@@ -224,19 +262,21 @@ class _GameAddition100ScreenState extends State<GameAddition100Screen>
     );
   }
 
-  /// 🌈 Animated fintech gradient background
   Widget _animatedBackground() {
     return AnimatedBuilder(
       animation: _gradientController,
-      builder: (context, child) {
+      builder: (context, _) {
         final t = _gradientController.value;
         final colors = [
           Color.lerp(const Color(0xFF5E2CED), const Color(0xFFFF8B00), t)!,
           Color.lerp(const Color(0xFFA58CFF), const Color(0xFF5E2CED), 1 - t)!,
         ];
         return ShaderMask(
-          shaderCallback: (r) =>
-              LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight).createShader(r),
+          shaderCallback: (r) => LinearGradient(
+            colors: colors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ).createShader(r),
           blendMode: BlendMode.srcATop,
           child: Container(color: Colors.white),
         );
@@ -244,12 +284,14 @@ class _GameAddition100ScreenState extends State<GameAddition100Screen>
     );
   }
 
-  /// 🌟 UI chính — TPBank Fintech style
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Scaffold(
-          body: Center(child: CircularProgressIndicator(color: Colors.tealAccent)));
+        body: Center(
+          child: CircularProgressIndicator(color: Colors.tealAccent),
+        ),
+      );
     }
 
     final size = MediaQuery.of(context).size;
@@ -271,6 +313,7 @@ class _GameAddition100ScreenState extends State<GameAddition100Screen>
           shaderCallback: (r) => const LinearGradient(
             colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
           ).createShader(r),
+          blendMode: BlendMode.srcATop,
           child: const Text(
             "Phép cộng ≤ 100",
             style: TextStyle(
@@ -289,15 +332,27 @@ class _GameAddition100ScreenState extends State<GameAddition100Screen>
             filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
             child: Container(color: Colors.white.withOpacity(0.08)),
           ),
+          // Confetti lớn (hoàn thành)
           ConfettiWidget(
-            confettiController: _confettiController,
+            confettiController: _confettiMain,
             blastDirectionality: BlastDirectionality.explosive,
             numberOfParticles: 25,
-            gravity: 0.3,
             colors: const [
               Color(0xFF5E2CED),
               Color(0xFFFF8B00),
               Color(0xFFA58CFF),
+            ],
+          ),
+          // Confetti nhỏ (trả lời đúng)
+          ConfettiWidget(
+            confettiController: _confettiMini,
+            blastDirectionality: BlastDirectionality.explosive,
+            emissionFrequency: 0.1,
+            numberOfParticles: 10,
+            colors: const [
+              Color(0xFFFFC300),
+              Color(0xFFA58CFF),
+              Color(0xFFFF8B00),
             ],
           ),
           SingleChildScrollView(
@@ -335,26 +390,26 @@ class _GameAddition100ScreenState extends State<GameAddition100Screen>
                   ),
                 ),
                 const SizedBox(height: 20),
-                AnimatedOpacity(
-                  opacity: resultText == null ? 0 : 1,
-                  duration: const Duration(milliseconds: 300),
-                  child: Text(
-                    resultText ?? "",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: resultColor,
+                if (resultText != null)
+                  AnimatedOpacity(
+                    opacity: 1,
+                    duration: const Duration(milliseconds: 300),
+                    child: Text(
+                      resultText!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: resultColor,
+                      ),
                     ),
                   ),
-                ),
                 const SizedBox(height: 40),
                 Wrap(
                   spacing: 20,
                   runSpacing: 16,
-                  children: options
-                      .map(
-                        (opt) => GestureDetector(
+                  children: options.map((opt) {
+                    return GestureDetector(
                       onTap: () => _check(opt),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -384,52 +439,38 @@ class _GameAddition100ScreenState extends State<GameAddition100Screen>
                           ),
                         ),
                       ),
-                    ),
-                  )
-                      .toList(),
+                    );
+                  }).toList(),
                 ),
                 const SizedBox(height: 50),
-                if (!isReviewMode)
-                  Column(
-                    children: [
-                      Container(
-                        width: size.width * 0.6,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(10),
+                // Progress bar fintech
+                Container(
+                  width: size.width * 0.6,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: AnimatedFractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    duration: const Duration(milliseconds: 400),
+                    widthFactor: correctCount / 10,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFFC300), Color(0xFFFF8B00)],
                         ),
-                        child: AnimatedFractionallySizedBox(
-                          alignment: Alignment.centerLeft,
-                          duration: const Duration(milliseconds: 400),
-                          widthFactor: correctCount / 10,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFFFC300), Color(0xFFFF8B00)],
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Tiến độ: $correctCount / 10",
-                        style: const TextStyle(
-                            color: Color(0xFF5E2CED),
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  )
-                else
-                  const Text(
-                    "Chế độ ôn luyện 🌈",
-                    style: TextStyle(
-                      color: Colors.teal,
-                      fontWeight: FontWeight.bold,
                     ),
                   ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Tiến độ: $correctCount / 10",
+                  style: const TextStyle(
+                      color: Color(0xFF5E2CED), fontWeight: FontWeight.bold),
+                ),
               ],
             ),
           ),

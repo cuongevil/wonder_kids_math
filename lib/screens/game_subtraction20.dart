@@ -5,10 +5,8 @@ import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/progress_service.dart';
-import '../widgets/wow_mascot.dart';
-import 'base_screen.dart';
 
-/// ➖ GameSubtraction20Screen v6.0 — Fintech Glow + Gradient Popup + 3-Tier Confetti
+/// ➖ GameSubtraction20Screen v7.0 — Fintech Gradient UI (No Mascot, No BottomBar)
 class GameSubtraction20Screen extends StatefulWidget {
   const GameSubtraction20Screen({super.key});
 
@@ -32,34 +30,29 @@ class _GameSubtraction20ScreenState extends State<GameSubtraction20Screen>
 
   int correctCount = 0;
   bool isCompleted = false;
-  bool isReviewMode = false;
-  bool isMascotHappy = true;
   bool isLoading = true;
+  bool isAnswered = false;
+
+  String? resultText;
+  Color? resultColor;
 
   late ConfettiController _confettiController;
   late ConfettiController _miniConfettiController;
-  late AnimationController _popupController;
-
-  final List<String> praiseVoices = ["correct1", "correct2", "correct3"];
-  final List<String> praiseTexts = [
-    "Giỏi quá bé ơi! 🌟",
-    "Tuyệt vời! 💪",
-    "Siêu đỉnh luôn! 🦸",
-    "Bé thông minh quá! 🧠",
-    "Yeah! Chính xác rồi 🎉",
-  ];
+  late AnimationController _shimmerController;
+  late AnimationController _bgController;
 
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _miniConfettiController = ConfettiController(duration: const Duration(seconds: 1));
-    _popupController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-      lowerBound: 0.7,
-      upperBound: 1.0,
-    );
+    _shimmerController =
+    AnimationController(vsync: this, duration: const Duration(seconds: 2))
+      ..repeat(reverse: true);
+    _bgController =
+    AnimationController(vsync: this, duration: const Duration(seconds: 8))
+      ..repeat(reverse: true);
+
     _initProgress();
   }
 
@@ -67,17 +60,26 @@ class _GameSubtraction20ScreenState extends State<GameSubtraction20Screen>
     _prefs = await SharedPreferences.getInstance();
     correctCount = _prefs.getInt(progressKey) ?? 0;
     isCompleted = _prefs.getBool(completedKey) ?? false;
-    isReviewMode = isCompleted;
+
+    // ✅ Reset nếu trước đó đã complete để vào lại bắt đầu từ 0
+    if (isCompleted) {
+      correctCount = 0;
+      isCompleted = false;
+      await _prefs.setInt(progressKey, 0);
+      await _prefs.setBool(completedKey, false);
+    }
+
     _newQuestion();
     setState(() => isLoading = false);
   }
 
   @override
   void dispose() {
+    _player.dispose();
     _confettiController.dispose();
     _miniConfettiController.dispose();
-    _popupController.dispose();
-    _player.dispose();
+    _shimmerController.dispose();
+    _bgController.dispose();
     super.dispose();
   }
 
@@ -88,116 +90,89 @@ class _GameSubtraction20ScreenState extends State<GameSubtraction20Screen>
   }
 
   void _newQuestion() {
+    // Tạo bài toán trừ trong phạm vi 0..20, số bị trừ 10..20 để đúng “≤20”
     a = _rand.nextInt(11) + 10; // 10–20
-    b = _rand.nextInt(a + 1); // đảm bảo b ≤ a
+    b = _rand.nextInt(a + 1);   // 0..a
     answer = a - b;
-    options = [answer];
-    while (options.length < 3) {
-      int fake = _rand.nextInt(21);
-      if (!options.contains(fake)) options.add(fake);
+
+    // Tạo 3 phương án (1 đúng + 2 sai), trong phạm vi 0..20
+    final set = <int>{answer};
+    while (set.length < 3) {
+      final fake = _rand.nextInt(21); // 0..20
+      set.add(fake);
     }
-    options.shuffle();
+    options = set.toList()..shuffle();
+
+    resultText = null;
+    resultColor = null;
+    isAnswered = false;
     setState(() {});
   }
 
   Future<void> _check(int value) async {
+    if (isAnswered) return;
+    isAnswered = true;
+
     final correct = value == answer;
-
     if (correct) {
-      isMascotHappy = true;
+      await _play("correct1");
       _miniConfettiController.play();
-      await _play(praiseVoices[_rand.nextInt(praiseVoices.length)]);
+      resultText = "🎉 Chính xác rồi!";
+      resultColor = const Color(0xFF5E2CED);
 
-      if (!isReviewMode) {
-        correctCount++;
-        await _prefs.setInt(progressKey, correctCount);
+      correctCount++;
+      await _prefs.setInt(progressKey, correctCount);
 
-        if (correctCount >= 10 && !isCompleted) {
-          isCompleted = true;
-          await _prefs.setBool(completedKey, true);
-          await Future.delayed(const Duration(milliseconds: 500));
-          await _showRewardPopup();
-          return;
-        }
+      if (correctCount >= 10 && !isCompleted) {
+        isCompleted = true;
+        await _prefs.setBool(completedKey, true);
+        await Future.delayed(const Duration(milliseconds: 600));
+        await _onCompleted();
+        return;
       }
-
-      _popupController.forward(from: 0.7);
-      _showDialog(
-        title: "🎉 Chính xác!",
-        content: praiseTexts[_rand.nextInt(praiseTexts.length)],
-        next: _newQuestion,
-      );
     } else {
-      isMascotHappy = false;
-      await _play('wrong');
-      _showDialog(
-        title: "❌ Sai rồi",
-        content: "Đáp án đúng là $answer",
-        next: _newQuestion,
-      );
+      await _play("wrong");
+      resultText = "❌ Sai rồi — đáp án đúng là $answer";
+      resultColor = Colors.redAccent;
     }
+
+    setState(() {});
+    await Future.delayed(const Duration(milliseconds: 1200));
+    _newQuestion();
   }
 
-  void _showDialog({
-    required String title,
-    required String content,
-    required VoidCallback next,
-  }) {
-    showDialog(
-      context: context,
-      builder: (_) => ScaleTransition(
-        scale: CurvedAnimation(parent: _popupController, curve: Curves.elasticOut),
-        child: AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text(title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.bold)),
-          content: Text(content, textAlign: TextAlign.center),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                next();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.pinkAccent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              child: const Text("Tiếp tục ➡️"),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 🎊 Popup hoàn thành Fintech (blur + gradient glow)
-  Future<void> _showRewardPopup() async {
-    await _play("victory");
+  Future<void> _onCompleted() async {
     _confettiController.play();
+    await _play("victory");
+
+    // 🔓 Unlock level kế tiếp qua ProgressService
     await ProgressService.markLevelCompleted("subtraction20");
 
+    // ♻️ Reset để lần sau vào lại bắt đầu từ 0
+    await _prefs.setInt(progressKey, 0);
+    await _prefs.setBool(completedKey, false);
+
+    _showRewardPopup();
+  }
+
+  void _showRewardPopup() {
     final size = MediaQuery.of(context).size;
     showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      barrierLabel: '',
       transitionDuration: const Duration(milliseconds: 400),
-      pageBuilder: (_, __, ___) => Container(),
+      pageBuilder: (_, __, ___) => const SizedBox.shrink(),
       transitionBuilder: (_, anim, __, ___) {
-        final scale =
-        Tween<double>(begin: 0.8, end: 1.0).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack));
-
+        final scale = Tween<double>(begin: 0.8, end: 1.0)
+            .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack));
         return Transform.scale(
           scale: scale.value,
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
             child: Dialog(
               backgroundColor: Colors.white.withOpacity(0.05),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-              insetPadding: const EdgeInsets.all(24),
+              shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(30),
@@ -208,43 +183,21 @@ class _GameSubtraction20ScreenState extends State<GameSubtraction20Screen>
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.25),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
+                        color: Colors.black.withOpacity(0.25), blurRadius: 20),
                   ],
                 ),
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    AnimatedScale(
-                      duration: const Duration(milliseconds: 600),
-                      curve: Curves.easeOutBack,
-                      scale: scale.value,
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.white.withOpacity(0.6),
-                              blurRadius: 25,
-                              spreadRadius: 10,
-                            ),
-                          ],
-                        ),
-                        child: Image.asset(
-                          "assets/images/mascot/mascot_10.png",
-                          width: size.width * 0.4,
-                        ),
-                      ),
-                    ),
+                    Image.asset("assets/images/mascot/mascot_10.png",
+                        width: size.width * 0.4),
                     const SizedBox(height: 20),
                     ShaderMask(
                       shaderCallback: (r) => const LinearGradient(
                         colors: [Colors.white, Color(0xFFFFE082)],
                       ).createShader(r),
+                      blendMode: BlendMode.srcATop,
                       child: const Text(
                         "Bé đã hoàn thành 10 phép trừ ≤20! 🌟",
                         textAlign: TextAlign.center,
@@ -262,32 +215,32 @@ class _GameSubtraction20ScreenState extends State<GameSubtraction20Screen>
                         Navigator.pop(context, true);
                       },
                       child: Container(
-                        padding:
-                        const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 40, vertical: 16),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(25),
                           gradient: const LinearGradient(
                             colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Color(0xFF5E2CED).withOpacity(0.4),
+                              color:
+                              const Color(0xFFFF8B00).withOpacity(0.4),
                               blurRadius: 20,
-                              offset: const Offset(0, 8),
+                              offset: const Offset(0, 6),
                             ),
                           ],
                         ),
                         child: const Text(
                           "Quay lại bản đồ",
                           style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
-                    ),
+                    )
                   ],
                 ),
               ),
@@ -295,6 +248,117 @@ class _GameSubtraction20ScreenState extends State<GameSubtraction20Screen>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildProgressBar(Size size) {
+    final shimmerVal = _shimmerController.value;
+    final offset = (shimmerVal * 2 - 1);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: size.width * 0.8,
+            height: 18,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(25),
+            ),
+          ),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 400),
+            width: (size.width * 0.8) * (correctCount / 10).clamp(0.0, 1.0),
+            height: 18,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(25),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFF8B00).withOpacity(0.35),
+                  blurRadius: 12,
+                ),
+              ],
+            ),
+          ),
+          // Shimmer highlight
+          ShaderMask(
+            shaderCallback: (r) => LinearGradient(
+              begin: Alignment(-1.0 + offset, 0),
+              end: Alignment(1.0 + offset, 0),
+              colors: [
+                Colors.white.withOpacity(0.0),
+                Colors.white.withOpacity(0.8),
+                Colors.white.withOpacity(0.0),
+              ],
+              stops: const [0.2, 0.5, 0.8],
+            ).createShader(r),
+            blendMode: BlendMode.srcATop,
+            child: Container(
+              width: size.width * 0.8,
+              height: 18,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(25),
+                color: Colors.white.withOpacity(0.05),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: Center(
+              child: Text(
+                "${(correctCount / 10 * 100).toStringAsFixed(0)}%",
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuestionCard(Size size) {
+    final shimmerPos = (_shimmerController.value * 2 - 1);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 30),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 20,
+              offset: const Offset(0, 6))
+        ],
+      ),
+      child: ShaderMask(
+        shaderCallback: (r) => LinearGradient(
+          begin: Alignment(-1.0 + shimmerPos, 0),
+          end: Alignment(1.0 + shimmerPos, 0),
+          colors: [
+            Colors.white.withOpacity(0.3),
+            Colors.white.withOpacity(0.9),
+            Colors.white.withOpacity(0.3),
+          ],
+          stops: const [0.2, 0.5, 0.8],
+        ).createShader(r),
+        blendMode: BlendMode.srcATop,
+        child: Text(
+          "$a – $b = ?",
+          style: const TextStyle(
+              fontSize: 50,
+              fontWeight: FontWeight.w900,
+              color: Colors.white),
+        ),
+      ),
     );
   }
 
@@ -306,137 +370,152 @@ class _GameSubtraction20ScreenState extends State<GameSubtraction20Screen>
               child: CircularProgressIndicator(color: Colors.pinkAccent)));
     }
 
-    final width = MediaQuery.of(context).size.width;
+    final size = MediaQuery.of(context).size;
 
-    return BaseScreen(
-      title: "Phép trừ ≤20",
-      child: Stack(
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white.withOpacity(0.05),
+        centerTitle: true,
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            child: Container(color: Colors.white.withOpacity(0.05)),
+          ),
+        ),
+        title: ShaderMask(
+          shaderCallback: (r) => const LinearGradient(
+            colors: [Color(0xFF5E2CED), Color(0xFFFF8B00)],
+          ).createShader(r),
+          blendMode: BlendMode.srcATop,
+          child: const Text(
+            "Phép trừ ≤20",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 22,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+      body: Stack(
         alignment: Alignment.center,
         children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFFFFE5D0), Color(0xFFD0E5FF)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
+          // Nền gradient động fintech
+          AnimatedBuilder(
+            animation: _bgController,
+            builder: (_, __) {
+              final t = _bgController.value;
+              final colors = [
+                Color.lerp(const Color(0xFF5E2CED),
+                    const Color(0xFFFF8B00), t)!,
+                Color.lerp(const Color(0xFFA58CFF),
+                    const Color(0xFF5E2CED), 1 - t)!,
+              ];
+              return ShaderMask(
+                shaderCallback: (bounds) => LinearGradient(
+                  colors: colors,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ).createShader(bounds),
+                blendMode: BlendMode.srcATop,
+                child: Container(color: Colors.white),
+              );
+            },
           ),
-
-          // 🎊 Confetti 3 tầng Fintech
-          Align(
-            alignment: Alignment.center,
-            child: ConfettiWidget(
-              confettiController: _confettiController,
-              blastDirectionality: BlastDirectionality.explosive,
-              emissionFrequency: 0.05,
-              numberOfParticles: 25,
-              gravity: 0.3,
-              colors: const [
-                Color(0xFF5E2CED),
-                Color(0xFFFF8B00),
-                Color(0xFFA58CFF),
-              ],
-            ),
+          // Lớp kính mờ
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+            child: Container(color: Colors.white.withOpacity(0.08)),
           ),
-          Align(
-            alignment: Alignment.center,
-            child: ConfettiWidget(
-              confettiController: _miniConfettiController,
-              blastDirectionality: BlastDirectionality.explosive,
-              numberOfParticles: 10,
-              gravity: 0.4,
-              colors: const [
-                Color(0xFFFFC300),
-                Color(0xFF7E57C2),
-                Color(0xFFFF80AB),
-              ],
-            ),
-          ),
-
-          Positioned(bottom: 100, right: 24, child: WowMascot.only(isHappy: isMascotHappy, scale: 0.8)),
-
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                "$a – $b = ?",
-                style: const TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.deepPurple,
-                  shadows: [Shadow(offset: Offset(2, 2), color: Colors.white)],
-                ),
-              ),
-              const SizedBox(height: 30),
-              Wrap(
-                spacing: 20,
-                runSpacing: 16,
-                children: options
-                    .map(
-                      (opt) => ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepOrangeAccent,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 32, vertical: 18),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24)),
-                      elevation: 8,
-                    ),
-                    onPressed: () => _check(opt),
-                    child: Text(
-                      "$opt",
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                )
-                    .toList(),
-              ),
-              const SizedBox(height: 40),
-              if (!isReviewMode)
-                Column(
-                  children: [
-                    Container(
-                      width: width * 0.6,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.4),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: AnimatedFractionallySizedBox(
-                        alignment: Alignment.centerLeft,
-                        duration: const Duration(milliseconds: 400),
-                        widthFactor: correctCount / 10,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.amber,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Tiến độ: $correctCount / 10",
-                      style: const TextStyle(
-                          color: Colors.deepPurple,
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                )
-              else
-                const Text(
-                  "Chế độ ôn luyện 🌈",
-                  style: TextStyle(
-                    color: Colors.pinkAccent,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+          // Confetti hoàn thành & mini
+          ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirectionality: BlastDirectionality.explosive,
+            numberOfParticles: 25,
+            colors: const [
+              Color(0xFF5E2CED),
+              Color(0xFFFF8B00),
+              Color(0xFFA58CFF),
             ],
+          ),
+          ConfettiWidget(
+            confettiController: _miniConfettiController,
+            blastDirectionality: BlastDirectionality.explosive,
+            emissionFrequency: 0.1,
+            numberOfParticles: 10,
+            colors: const [
+              Color(0xFFFFC300),
+              Color(0xFFA58CFF),
+              Color(0xFFFF8B00),
+            ],
+          ),
+          // Nội dung
+          SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.only(top: size.height * 0.12, bottom: 80),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildProgressBar(size),
+                const SizedBox(height: 10),
+                Text(
+                  "Câu đúng: $correctCount / 10",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    shadows: [
+                      Shadow(
+                          offset: Offset(0, 1),
+                          blurRadius: 4,
+                          color: Colors.black26)
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40),
+                _buildQuestionCard(size),
+                const SizedBox(height: 20),
+                if (resultText != null)
+                  AnimatedOpacity(
+                    opacity: 1,
+                    duration: const Duration(milliseconds: 300),
+                    child: Text(
+                      resultText!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: resultColor),
+                    ),
+                  ),
+                const SizedBox(height: 40),
+                Wrap(
+                  spacing: 20,
+                  runSpacing: 16,
+                  children: options.map((opt) {
+                    return ElevatedButton(
+                      onPressed: () => _check(opt),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF5E2CED),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 38, vertical: 20),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
+                        elevation: 8,
+                      ),
+                      child: Text(
+                        "$opt",
+                        style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
           ),
         ],
       ),
