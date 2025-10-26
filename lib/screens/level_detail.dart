@@ -1,6 +1,6 @@
-// 📄 lib/screens/level_detail.dart
 import 'dart:math';
 import 'dart:ui';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
@@ -9,10 +9,9 @@ import '../models/level.dart';
 import '../services/progress_service.dart';
 import '../themes/app_theme.dart';
 
-/// 🌈 LevelDetail 2025 — CHỈ render nội dung màn chơi
-/// ⚠️ KHÔNG bọc AppShell ở đây để tránh “double shell” → bug chỉ về Map
 class LevelDetail extends StatefulWidget {
   static const routeName = '/level_detail';
+
   const LevelDetail({super.key});
 
   @override
@@ -25,6 +24,8 @@ class _LevelDetailState extends State<LevelDetail>
   late AnimationController _bounceController;
   late AnimationController _sparkleController;
   late AnimationController _glowController;
+  late AnimationController _gradientController;
+  late AnimationController _starController;
   final AudioPlayer _player = AudioPlayer();
 
   Level? _currentLevel;
@@ -36,7 +37,9 @@ class _LevelDetailState extends State<LevelDetail>
   void initState() {
     super.initState();
 
-    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 3),
+    );
     _bounceController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -56,6 +59,16 @@ class _LevelDetailState extends State<LevelDetail>
       upperBound: 1.0,
     )..repeat(reverse: true);
 
+    _gradientController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    )..repeat(reverse: true);
+
+    _starController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 20),
+    )..repeat();
+
     Future.delayed(const Duration(milliseconds: 300), () async {
       if (!mounted) return;
       _confettiController.play();
@@ -71,7 +84,6 @@ class _LevelDetailState extends State<LevelDetail>
     _parseArgsAndLoad();
   }
 
-  /// 🔁 Load dữ liệu Level + cập nhật trạng thái ban đầu
   Future<void> _parseArgsAndLoad() async {
     final loaded = await ProgressService.loadLevels();
     _levels = loaded.isEmpty
@@ -92,29 +104,21 @@ class _LevelDetailState extends State<LevelDetail>
     _currentLevel ??= _levels.isNotEmpty
         ? _levels.first
         : Level(
-      index: 0,
-      title: 'Bắt đầu',
-      type: LevelType.start,
-      state: LevelState.playable,
-      levelKey: 'start',
-    );
+            index: 0,
+            title: 'Bắt đầu',
+            type: LevelType.start,
+            state: LevelState.playable,
+            levelKey: 'start',
+          );
 
     _levelIndex ??= _currentLevel?.index ?? 0;
 
-    // ✅ Nếu level bị khóa → mở ra
     if (_currentLevel!.state == LevelState.locked) {
       _currentLevel!.state = LevelState.playable;
       await ProgressService.updateLevelState(
         _currentLevel!.index,
         LevelState.playable,
       );
-    }
-
-    // ✅ Nếu là màn “Bắt đầu” → reset
-    if (_currentLevel!.levelKey == "start") {
-      _currentLevel!.stars = 0;
-      _currentLevel!.total = 0;
-      await ProgressService.saveLevel(_currentLevel!);
     }
 
     await ProgressService.saveLevels(_levels);
@@ -128,6 +132,8 @@ class _LevelDetailState extends State<LevelDetail>
     _sparkleController.dispose();
     _confettiController.dispose();
     _glowController.dispose();
+    _gradientController.dispose();
+    _starController.dispose();
     _player.dispose();
     super.dispose();
   }
@@ -137,12 +143,23 @@ class _LevelDetailState extends State<LevelDetail>
     final bool isStartLevel =
         (_currentLevel?.levelKey == "start") || (_levelIndex == 0);
 
-    // ❗️KHÔNG bọc AppShell — để Shell gốc của app vẫn là duy nhất
     return Scaffold(
-      backgroundColor: AppTheme.tpDarkBg,
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
-          _buildGradientBackground(),
+          _buildAnimatedBackground(),
+          IgnorePointer(ignoring: true, child: _buildParallaxStars()),
+          IgnorePointer(
+            ignoring: true,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  colors: [Colors.white.withOpacity(0.08), Colors.transparent],
+                  radius: 0.85,
+                ),
+              ),
+            ),
+          ),
           Center(
             child: isStartLevel
                 ? _buildStartScreen(context)
@@ -168,28 +185,55 @@ class _LevelDetailState extends State<LevelDetail>
     );
   }
 
-  // 🌈 Nền gradient động fintech
-  Widget _buildGradientBackground() {
-    return Positioned.fill(
-      child: AnimatedContainer(
-        duration: const Duration(seconds: 2),
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppTheme.tpDarkBg,
-              Color(0xFF5E2CED),
-              Color(0xFFA58CFF),
-              Color(0xFFFF8B00),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+  Widget _buildAnimatedBackground() {
+    return AnimatedBuilder(
+      animation: _gradientController,
+      builder: (context, _) {
+        final t = _gradientController.value;
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color.lerp(
+                  const Color(0xFF5E2CED),
+                  const Color(0xFFFF8B00),
+                  t,
+                )!,
+                Color.lerp(
+                  const Color(0xFF2B0C69),
+                  const Color(0xFF5E2CED),
+                  1 - t,
+                )!,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  // 🟣 Màn hình khởi đầu
+  // 🌌 Hiệu ứng sao nền
+  Widget _buildParallaxStars() {
+    final size = MediaQuery.of(context).size;
+    final Random rand = Random();
+    final stars = List.generate(
+      100,
+      (_) => Offset(rand.nextDouble(), rand.nextDouble()),
+    );
+    return AnimatedBuilder(
+      animation: _starController,
+      builder: (context, _) {
+        final paint = Paint()..color = Colors.white.withOpacity(0.8);
+        return CustomPaint(
+          painter: _StarPainter(stars, _starController.value, size, paint),
+          size: size,
+        );
+      },
+    );
+  }
+
   Widget _buildStartScreen(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -201,26 +245,28 @@ class _LevelDetailState extends State<LevelDetail>
             children: [
               _buildSparkle(80, 1.0, const Color(0xFFFF8B00)),
               _buildSparkle(60, -1.5, const Color(0xFF5E2CED)),
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF5E2CED).withOpacity(0.6),
-                      blurRadius: 30,
+              ScaleTransition(
+                scale: _bounceController,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(100),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.15),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Image.asset(
+                        "assets/images/mascot/mascot_10.png",
+                        width: 160,
+                        height: 160,
+                      ),
                     ),
-                    BoxShadow(
-                      color: const Color(0xFFFF8B00).withOpacity(0.4),
-                      blurRadius: 20,
-                    ),
-                  ],
-                ),
-                child: ScaleTransition(
-                  scale: _bounceController,
-                  child: Image.asset(
-                    "assets/images/mascot/mascot_10.png",
-                    width: 160,
-                    height: 160,
                   ),
                 ),
               ),
@@ -254,12 +300,9 @@ class _LevelDetailState extends State<LevelDetail>
               _confettiController.play();
               await _player.play(AssetSource("audios/crown.mp3"));
               await Future.delayed(const Duration(milliseconds: 600));
-
-              // ✅ Hoàn thành màn start → mở khóa level tiếp theo
               await ProgressService.markLevelCompleted("start");
-
               if (!mounted) return;
-              Navigator.pop(context, true); // quay về Shell gốc (tab giữ nguyên)
+              Navigator.pop(context, true);
             },
           ),
         ],
@@ -267,11 +310,9 @@ class _LevelDetailState extends State<LevelDetail>
     );
   }
 
-  // 🧩 Màn Level thông thường
   Widget _buildNormalLevel(BuildContext context) {
     final level = _currentLevel;
     if (level == null) return const SizedBox();
-
     final isCompleted = level.state == LevelState.completed;
 
     return Padding(
@@ -300,57 +341,28 @@ class _LevelDetailState extends State<LevelDetail>
             style: const TextStyle(fontSize: 16, color: Colors.white70),
           ),
           const SizedBox(height: 30),
-          ElevatedButton.icon(
-            icon: Icon(
-              isCompleted ? Icons.check_circle : Icons.flag_rounded,
-              color: Colors.white,
-            ),
-            label: Text(isCompleted ? "Quay lại bản đồ" : "Hoàn thành Level"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isCompleted ? Colors.grey : AppTheme.tpOrange,
-              minimumSize: const Size(220, 55),
-              elevation: 6,
-              shadowColor: AppTheme.tpOrange.withOpacity(0.4),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
-              ),
-            ),
+          _buildActionButton(
+            label: isCompleted ? "Quay lại bản đồ" : "Hoàn thành Level",
+            icon: isCompleted ? Icons.check_circle : Icons.flag_rounded,
+            color: isCompleted ? Colors.grey : AppTheme.tpOrange,
             onPressed: () async {
               if (isCompleted) {
                 Navigator.pop(context, true);
                 return;
               }
-
               _confettiController.play();
               await _player.play(AssetSource("audios/crown.mp3"));
               await Future.delayed(const Duration(milliseconds: 500));
-
-              // ✅ Đánh dấu hoàn thành + mở khóa kế tiếp
               await ProgressService.markLevelCompleted(level.levelKey!);
-
               if (!mounted) return;
-              Navigator.pop(context, true); // trở về AppShell gốc
+              Navigator.pop(context, true);
             },
-          ),
-          const SizedBox(height: 20),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.arrow_back),
-            label: const Text("Quay lại bản đồ"),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white70,
-              side: const BorderSide(color: Colors.white38),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25),
-              ),
-            ),
-            onPressed: () => Navigator.pop(context, false),
           ),
         ],
       ),
     );
   }
 
-  // 🌟 Nút hành động gradient + glow mềm
   Widget _buildActionButton({
     required String label,
     required IconData icon,
@@ -397,7 +409,6 @@ class _LevelDetailState extends State<LevelDetail>
     );
   }
 
-  // ✨ Hiệu ứng sao quay quanh mascot
   Widget _buildSparkle(double radius, double speed, Color color) {
     return AnimatedBuilder(
       animation: _sparkleController,
@@ -412,4 +423,29 @@ class _LevelDetailState extends State<LevelDetail>
       },
     );
   }
+}
+
+class _StarPainter extends CustomPainter {
+  final List<Offset> stars;
+  final double progress;
+  final Size size;
+  final Paint paintObj;
+
+  _StarPainter(this.stars, this.progress, this.size, this.paintObj);
+
+  @override
+  void paint(Canvas canvas, Size _) {
+    for (final s in stars) {
+      final dx =
+          (s.dx * size.width + sin(progress * 2 * pi + s.dy * 5) * 10) %
+          size.width;
+      final dy =
+          (s.dy * size.height + cos(progress * 2 * pi + s.dx * 5) * 10) %
+          size.height;
+      canvas.drawCircle(Offset(dx, dy), 1.3, paintObj);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_) => true;
 }

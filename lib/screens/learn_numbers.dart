@@ -595,8 +595,10 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
       transitionDuration: const Duration(milliseconds: 400),
       pageBuilder: (_, __, ___) => Container(),
       transitionBuilder: (_, anim, __, ___) {
-        final scale = Tween<double>(begin: 0.8, end: 1.0)
-            .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack));
+        final scale = Tween<double>(
+          begin: 0.8,
+          end: 1.0,
+        ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack));
         return Transform.scale(
           scale: scale.value,
           child: BackdropFilter(
@@ -604,7 +606,8 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
             child: Dialog(
               backgroundColor: Colors.white.withOpacity(0.05),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30)),
+                borderRadius: BorderRadius.circular(30),
+              ),
               insetPadding: const EdgeInsets.all(24),
               child: Container(
                 decoration: BoxDecoration(
@@ -626,8 +629,10 @@ class _LearnNumbersScreenState extends State<LearnNumbersScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset("assets/images/mascot/mascot_10.png",
-                        width: size.width * 0.4),
+                    Image.asset(
+                      "assets/images/mascot/mascot_10.png",
+                      width: size.width * 0.4,
+                    ),
                     const SizedBox(height: 20),
                     ShaderMask(
                       shaderCallback: (r) => const LinearGradient(
