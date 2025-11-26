@@ -1,2 +1,0 @@
-// Dummy redirect for flutterfire CLI (uses Kotlin DSL)
-apply from: "build.gradle.kts"

@@ -2,7 +2,7 @@ name: wonderkids.math
 description: WonderKids Vui Học Toán
 publish_to: "none" # chỉ dùng nội bộ
 
-version: 1.0.0+3
+version: 1.0.1+4
 
 environment:
   sdk: ^3.9.0
