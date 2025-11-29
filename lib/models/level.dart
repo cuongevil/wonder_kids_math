@@ -1,4 +1,3 @@
-/// 🎯 Level Model — fixed for enum serialization
 enum LevelType { start, topic, boss, end }
 enum LevelState { locked, playable, completed }
 

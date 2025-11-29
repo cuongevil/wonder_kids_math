@@ -515,7 +515,7 @@ class WowMascotLayer extends StatelessWidget {
             opacity: opacity,
             child: Align(
               alignment: Alignment.topCenter,
-              child: Image.asset('assets/images/wow_mascot.png', height: 160),
+              child: Image.asset('assets/images/mascot/mascot_happy.png', height: 160),
             ),
           ),
         );
